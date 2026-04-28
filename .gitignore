@@ -10,6 +10,12 @@ build/
 *.db-shm
 *.db-wal
 
+# Environment variables (IMPORTANT!)
+.env
+.env.local
+.env.production
+.env.*.local
+
 # IDE
 .vscode/settings.json
 .idea/
@@ -21,10 +27,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
-
-# Environment
-.env.local
-.env.production
 
 # Temp files
 *.tmp
