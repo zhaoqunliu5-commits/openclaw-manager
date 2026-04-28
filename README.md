@@ -79,7 +79,7 @@ npm install
 创建 `backend/.env`（参考 `backend/.env.example`）:
 ```env
 PORT=3001
-API_KEY=openclaw-manager-2026
+API_KEY=your-secret-api-key-here
 OPENCLAW_PATH=/home/用户名/.openclaw
 WORKSPACES_PATH=/home/用户名/workspaces
 ```

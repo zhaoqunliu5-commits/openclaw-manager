@@ -28,7 +28,8 @@ frontend/src/
 ## 关键约定
 
 ### API 认证
-- 所有请求需要 Header: `x-api-key: openclaw-manager-2026`
+- 所有请求需要 Header: `x-api-key: <your-api-key>`
+- API Key 通过环境变量 `API_KEY` 配置
 - 位于 `backend/src/middleware/auth.ts`
 
 ### WSL 集成
@@ -47,8 +48,8 @@ frontend/src/
 - 使用 `better-sqlite3` 同步 API
 
 ### 配置文件路径 (WSL)
-- OpenClaw 路径: `/home/afan/.openclaw`
-- 工作区路径: `/home/afan/workspaces`
+- OpenClaw 路径: 通过环境变量 `OPENCLAW_PATH` 配置（必需）
+- 工作区路径: 通过环境变量 `OPENCLAW_WORKSPACES_PATH` 配置（必需）
 
 ## 开发命令
 

@@ -1,8 +1,10 @@
 import json, subprocess, sys, os, time
 
 agent_id = sys.argv[1] if len(sys.argv) > 1 else "main"
+openclaw_path = os.environ.get('OPENCLAW_PATH', os.path.expanduser('~/.openclaw'))
+config_file = os.path.join(openclaw_path, 'openclaw.json')
 
-with open('/home/afan/.openclaw/openclaw.json', 'r') as f:
+with open(config_file, 'r') as f:
     config = json.load(f)
 
 agent_list = config.get('agents', {}).get('list', [])
@@ -18,7 +20,7 @@ if not found:
     print(f"Agent '{agent_id}' not found in config", file=sys.stderr)
     sys.exit(1)
 
-with open('/home/afan/.openclaw/openclaw.json', 'w') as f:
+with open(config_file, 'w') as f:
     json.dump(config, f, indent=2, ensure_ascii=False)
 
 subprocess.Popen(

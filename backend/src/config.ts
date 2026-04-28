@@ -1,5 +1,9 @@
-const OPENCLAW_PATH = process.env.OPENCLAW_PATH || '/home/afan/.openclaw';
-const OPENCLAW_WORKSPACES_PATH = process.env.OPENCLAW_WORKSPACES_PATH || '/home/afan/openclaw-workspaces';
+const OPENCLAW_PATH = process.env.OPENCLAW_PATH || (() => {
+  throw new Error('OPENCLAW_PATH environment variable is required. Set it in your .env file, e.g. OPENCLAW_PATH=/home/<username>/.openclaw');
+})();
+const OPENCLAW_WORKSPACES_PATH = process.env.OPENCLAW_WORKSPACES_PATH || (() => {
+  throw new Error('OPENCLAW_WORKSPACES_PATH environment variable is required. Set it in your .env file, e.g. OPENCLAW_WORKSPACES_PATH=/home/<username>/workspaces');
+})();
 
 export const appConfig = {
   openclawPath: OPENCLAW_PATH,

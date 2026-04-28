@@ -340,7 +340,8 @@ export class OpenclawService {
     DataCache.invalidate('agents');
     DataCache.invalidate('overview');
     try {
-      const scriptPath = '/mnt/d/AI/github氛围编程/my-first-project/hot_switch.py';
+      const projectRoot = process.env.PROJECT_ROOT || '/mnt/c/openclaw-manager';
+      const scriptPath = `${projectRoot}/scripts/hot_switch.py`;
       const output = await WslService.execCommand(
         `python3 ${scriptPath} ${agentId} 2>&1`,
         60000
