@@ -1,6 +1,7 @@
 import { WslService } from './wslService.js';
 import { dbService } from './dbService.js';
 import { notificationManager } from './notificationService.js';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 
 export interface AutomationRule {
   id: number;
@@ -108,8 +109,8 @@ class AutomationService {
       this.updateLog(logId, 'success', result);
       this.updateRuleTrigger(ruleId);
       return { success: true, result };
-    } catch (error: any) {
-      const errMsg = error.message || String(error);
+    } catch (error: unknown) {
+      const errMsg = getErrorMessage(error);
       this.updateLog(logId, 'failed', errMsg);
       return { success: false, result: errMsg };
     }

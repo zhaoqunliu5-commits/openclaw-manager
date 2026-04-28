@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, Send, Radio, ArrowRight, Plus, Trash2,
-  Play, MessageSquare, GitBranch
+  Play, MessageSquare, GitBranch, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../api';
@@ -20,7 +20,7 @@ const CollaborationPanel: React.FC = () => {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: agents = [] } = useQuery({
+  const { data: agents = [], isLoading: agentsLoading, refetch: refetchAgents } = useQuery({
     queryKey: ['collabAgents'],
     queryFn: apiService.getCollaborationAgents,
   });
@@ -98,7 +98,7 @@ const CollaborationPanel: React.FC = () => {
     setWorkflowSteps(workflowSteps.filter((_, i) => i !== index));
   };
 
-  const updateWorkflowStep = (index: number, field: keyof WorkflowStep, value: any) => {
+  const updateWorkflowStep = (index: number, field: keyof WorkflowStep, value: string | boolean) => {
     const updated = [...workflowSteps];
     updated[index] = { ...updated[index], [field]: value };
     setWorkflowSteps(updated);
@@ -121,8 +121,30 @@ const CollaborationPanel: React.FC = () => {
         <div className="flex items-center gap-3">
           <Users className="w-6 h-6 text-purple-400" />
           <h2 className="text-xl font-bold text-gray-200">多 Agent 协作</h2>
+          <span className="text-xs text-gray-500">{agents.length > 0 ? `${agents.length} 个 Agent` : ''}</span>
         </div>
+        <button
+          onClick={() => { queryClient.invalidateQueries({ queryKey: ['collabAgents'] }); refetchAgents(); }}
+          className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+          title="刷新 Agent 列表"
+        >
+          <RefreshCw className={`w-4 h-4 text-gray-400 ${agentsLoading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
+
+      {agents.length === 0 && !agentsLoading && (
+        <div className="flex flex-col items-center justify-center py-8 text-gray-500 mb-4">
+          <AlertCircle className="w-8 h-8 mb-2 text-gray-600" />
+          <p className="text-sm mb-1">未检测到 Agent</p>
+          <p className="text-xs text-gray-600 mb-3">请确保 OpenClaw 服务正在运行，或检查 WSL 连接</p>
+          <button
+            onClick={() => { queryClient.invalidateQueries({ queryKey: ['collabAgents'] }); refetchAgents(); }}
+            className="px-3 py-1.5 bg-purple-500/20 text-purple-400 rounded-lg text-xs hover:bg-purple-500/30 transition-colors"
+          >
+            重新检测
+          </button>
+        </div>
+      )}
 
       {message && (
         <motion.div
@@ -215,7 +237,7 @@ const CollaborationPanel: React.FC = () => {
             {messagesLoading ? (
               <div className="text-center text-gray-500 py-8">加载中...</div>
             ) : messages.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">暂无消息</div>
+              <div className="text-center text-gray-500 py-8">暂无消息，发送消息后对话会出现在这里</div>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {messages.map(msg => (
@@ -272,7 +294,7 @@ const CollaborationPanel: React.FC = () => {
           </div>
 
           {bindings.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">暂无路由绑定</div>
+            <div className="text-center text-gray-500 py-8">暂无路由绑定，添加绑定后 Agent 之间可以互相通信</div>
           ) : (
             <div className="space-y-2">
               {bindings.map((b, i) => (

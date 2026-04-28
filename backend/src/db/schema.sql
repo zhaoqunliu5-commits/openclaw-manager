@@ -136,3 +136,26 @@ CREATE TABLE IF NOT EXISTS skill_stats (
 CREATE INDEX IF NOT EXISTS idx_workflow_status ON agent_workflows(status);
 CREATE INDEX IF NOT EXISTS idx_task_queue_priority ON task_queue(priority, status);
 CREATE INDEX IF NOT EXISTS idx_workspace_stats_access ON workspace_stats(access_count);
+CREATE INDEX IF NOT EXISTS idx_workspace_backups_workspace ON workspace_backups(workspace);
+CREATE INDEX IF NOT EXISTS idx_skill_stats_use_count ON skill_stats(use_count);
+CREATE INDEX IF NOT EXISTS idx_notifications_timestamp ON notifications(timestamp);
+CREATE INDEX IF NOT EXISTS idx_command_history_status ON command_history(status);
+CREATE INDEX IF NOT EXISTS idx_operations_type ON operations(operation_type);
+
+CREATE TABLE IF NOT EXISTS health_check_config (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  config_json TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS health_check_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  service_name TEXT NOT NULL,
+  healthy INTEGER NOT NULL,
+  response_time_ms INTEGER,
+  details TEXT,
+  checked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_health_history_service ON health_check_history(service_name);
+CREATE INDEX IF NOT EXISTS idx_health_history_time ON health_check_history(checked_at);

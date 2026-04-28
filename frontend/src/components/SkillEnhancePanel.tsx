@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../api';
+import type { SearchResultItem, GitHubSkillRecommendation } from '../types';
 
 const SkillEnhancePanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'installed' | 'market' | 'deps'>('installed');
@@ -35,10 +36,17 @@ const SkillEnhancePanel: React.FC = () => {
     queryFn: apiService.getSkillDependencies,
   });
 
-  const { data: searchResults = [] } = useQuery({
+  const { data: searchResults = [], isLoading: searchLoading, isError: searchError } = useQuery({
     queryKey: ['skillSearch', searchQuery],
     queryFn: () => apiService.searchSkills(searchQuery),
     enabled: !!searchQuery && activeTab === 'market',
+  });
+
+  const { data: trendingSkills = [] } = useQuery({
+    queryKey: ['trendingSkills'],
+    queryFn: apiService.getTrendingSkills,
+    enabled: activeTab === 'market',
+    staleTime: 300000,
   });
 
   const installMutation = useMutation({
@@ -318,25 +326,41 @@ const SkillEnhancePanel: React.FC = () => {
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="搜索 ClawHub 技能..."
+                    placeholder="搜索技能（支持中英文关键词）..."
                     className="w-full bg-gray-800/50 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/30"
                   />
                 </div>
               </div>
 
-              {!searchQuery ? (
-                <div className="text-center py-8 text-gray-500 text-sm">输入关键词搜索 ClawHub 上的可安装技能</div>
-              ) : searchResults.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-sm">未找到匹配的技能</div>
-              ) : (
+              {searchLoading && searchQuery ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="w-5 h-5 text-purple-400 animate-spin" />
+                  <span className="ml-2 text-sm text-gray-400">搜索中...</span>
+                </div>
+              ) : searchError && searchQuery ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                  <XCircle className="w-8 h-8 mb-2 text-red-400" />
+                  <p className="text-sm mb-1">搜索服务暂时不可用</p>
+                  <p className="text-xs text-gray-600">请检查网络连接或稍后重试</p>
+                </div>
+              ) : searchQuery && searchResults.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                  <Search className="w-8 h-8 mb-2 text-gray-600" />
+                  <p className="text-sm mb-1">未找到匹配的技能</p>
+                  <p className="text-xs text-gray-600">尝试使用英文关键词，如 "code review"、"search"、"writing"</p>
+                </div>
+              ) : searchQuery ? (
                 <div className="space-y-2">
-                  {searchResults.map((skill: any, i: number) => (
+                  {searchResults.map((skill: SearchResultItem, i: number) => (
                     <div key={i} className="bg-gray-800/30 rounded-xl border border-white/5 p-3 flex items-center gap-3">
                       <span className="text-xl">{skill.emoji || '📦'}</span>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-gray-200 font-medium truncate">{skill.name || skill.slug}</div>
                         <div className="text-xs text-gray-500 truncate">{skill.description || ''}</div>
                       </div>
+                      {skill.source === 'github' && (
+                        <span className="px-1.5 py-0.5 bg-gray-500/10 text-gray-400 text-[9px] rounded">GitHub</span>
+                      )}
                       {installedSlugs.has(skill.slug) ? (
                         <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] rounded-lg">已安装</span>
                       ) : (
@@ -351,6 +375,45 @@ const SkillEnhancePanel: React.FC = () => {
                       )}
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div>
+                  {trendingSkills.length > 0 && (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-3 font-medium flex items-center gap-1.5">
+                        <span>🔥</span> 热门推荐
+                      </div>
+                      <div className="space-y-2">
+                        {trendingSkills.slice(0, 6).map((skill: GitHubSkillRecommendation, i: number) => (
+                          <div key={i} className="bg-gray-800/30 rounded-xl border border-white/5 p-3 flex items-center gap-3">
+                            <span className="text-xl">📦</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm text-gray-200 font-medium truncate">{skill.name || skill.slug}</div>
+                              <div className="text-xs text-gray-500 truncate">{skill.description || skill.reason || ''}</div>
+                            </div>
+                            {installedSlugs.has(skill.slug) ? (
+                              <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] rounded-lg">已安装</span>
+                            ) : (
+                              <button
+                                onClick={() => installMutation.mutate(skill.slug)}
+                                disabled={installMutation.isPending}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded-lg text-xs text-purple-300 disabled:opacity-40"
+                              >
+                                {installMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                                安装
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {trendingSkills.length === 0 && (
+                    <div className="text-center py-8 text-gray-500 text-sm">
+                      <p className="mb-1">输入关键词搜索可安装的技能</p>
+                      <p className="text-xs text-gray-600">支持中英文搜索，如 "代码审查"、"search"、"writing"</p>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>

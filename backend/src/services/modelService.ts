@@ -1,6 +1,7 @@
 import { WslService } from './wslService.js';
 import { appConfig } from '../config.js';
 import { DataCache } from './dataCache.js';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import type { ModelProvider, ModelAlias, AgentModelInfo, ModelDefinition } from '../types/index.js';
 
 const OPENCLAW_PATH = appConfig.openclawPath;
@@ -202,7 +203,8 @@ print(json.dumps({"provider": provider, "models": models}, ensure_ascii=False))
 `;
       const output = await runPythonScript(script, 20000);
       return JSON.parse(output.trim());
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error('[ModelService] refreshProviderModels error:', getErrorMessage(error));
       return { provider: 'custom', models: [] };
     }
   }

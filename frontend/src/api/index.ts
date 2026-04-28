@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ServiceStatus, OverviewData, ConfigData, OperationLog, AgentInfo, SkillInfo, WorkspaceInfo, ModelProvider, ModelAlias, AgentModelInfo, DetectProviderResult, SystemResources, AgentActivity, GatewayMetrics, ConfigBackup, ConfigDiff, ConfigSection, CommandEntry, CommandHistoryEntry, CommandResult, SkillDetail, MemoryEntry, RecallEntry, MemoryStatus, MemorySearchResult, SessionInfo, AppNotification, AgentBinding, AgentMessage, WorkflowStep, AgentWorkflow, AppSettings, AutomationRule, AutomationLog, GitHubSkillRecommendation } from '../types';
+import type { ServiceStatus, OverviewData, ConfigData, OperationLog, AgentInfo, SkillInfo, WorkspaceInfo, ModelProvider, ModelDefinition, ModelAlias, AgentModelInfo, DetectProviderResult, SystemResources, AgentActivity, GatewayMetrics, ConfigBackup, ConfigDiff, ConfigSection, CommandEntry, CommandHistoryEntry, CommandResult, SkillDetail, MemoryEntry, RecallEntry, MemoryStatus, MemorySearchResult, SessionInfo, AppNotification, AgentBinding, AgentMessage, WorkflowStep, AgentWorkflow, AppSettings, AutomationRule, AutomationLog, GitHubSkillRecommendation, WorkspaceStat, WorkspaceBackup, ScannedWorkspace, SkillStat, SkillRecommendation, SkillAnalysis, WorkflowInfo, TaskInfo, SearchResultItem, HealthCheckConfig, HealthCheckResult, HealthCheckHistoryEntry, MemoryDiagnostic } from '../types';
 
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 
@@ -15,12 +15,27 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+const RETRYABLE_STATUS = [408, 429, 500, 502, 503, 504];
+const MAX_RETRIES = 2;
+
 api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
-    return Promise.reject(error);
+  async (error) => {
+    const config = error.config;
+    if (!config || config.__retryCount >= MAX_RETRIES) {
+      return Promise.reject(error);
+    }
+    const status = error.response?.status;
+    if (!RETRYABLE_STATUS.includes(status)) {
+      return Promise.reject(error);
+    }
+    config.__retryCount = config.__retryCount || 0;
+    config.__retryCount += 1;
+    const delay = Math.min(1000 * Math.pow(2, config.__retryCount), 5000);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return api(config);
   }
 );
 
@@ -130,7 +145,7 @@ export const apiService = {
     return res.data;
   },
 
-  refreshProviderModels: async (name: string): Promise<{ providerName: string; models: any[] }> => {
+  refreshProviderModels: async (name: string): Promise<{ providerName: string; models: ModelDefinition[] }> => {
     const res = await api.post(`/models/providers/${name}/refresh`, {}, { timeout: 30000 });
     return res.data;
   },
@@ -165,12 +180,12 @@ export const apiService = {
     return res.data;
   },
 
-  getConfigJson: async (section?: string): Promise<any> => {
+  getConfigJson: async (section?: string): Promise<Record<string, unknown>> => {
     const res = await api.get('/config-manage/json', { params: section ? { section } : {} });
     return res.data;
   },
 
-  updateConfigSection: async (section: string, data: any): Promise<{ success: boolean; message: string }> => {
+  updateConfigSection: async (section: string, data: Record<string, unknown>): Promise<{ success: boolean; message: string }> => {
     const res = await api.put(`/config-manage/section/${section}`, data);
     return res.data;
   },
@@ -200,12 +215,12 @@ export const apiService = {
     return res.data;
   },
 
-  exportConfig: async (): Promise<{ config: any; timestamp: string; version: string }> => {
+  exportConfig: async (): Promise<{ config: Record<string, unknown>; timestamp: string; version: string }> => {
     const res = await api.get('/config-manage/export');
     return res.data;
   },
 
-  importConfig: async (config: any, merge?: boolean): Promise<{ success: boolean; message: string }> => {
+  importConfig: async (config: Record<string, unknown>, merge?: boolean): Promise<{ success: boolean; message: string }> => {
     const res = await api.post('/config-manage/import', { config, merge });
     return res.data;
   },
@@ -280,7 +295,7 @@ export const apiService = {
     return res.data;
   },
 
-  searchSkills: async (query: string): Promise<any[]> => {
+  searchSkills: async (query: string): Promise<SearchResultItem[]> => {
     const res = await api.get('/skill-enhance/search', { params: { q: query } });
     return res.data;
   },
@@ -297,6 +312,11 @@ export const apiService = {
 
   getMemoryStatus: async (): Promise<MemoryStatus[]> => {
     const res = await api.get('/memory/status');
+    return res.data;
+  },
+
+  getMemoryDiagnostic: async (): Promise<MemoryDiagnostic> => {
+    const res = await api.get('/memory/diagnostic');
     return res.data;
   },
 
@@ -390,12 +410,12 @@ export const apiService = {
     return res.data;
   },
 
-  sendAgentMessage: async (fromAgent: string, toAgent: string, message: string, options?: { channel?: string; deliver?: boolean; sessionId?: string }): Promise<{ success: boolean; message: string; result?: any }> => {
+  sendAgentMessage: async (fromAgent: string, toAgent: string, message: string, options?: { channel?: string; deliver?: boolean; sessionId?: string }): Promise<{ success: boolean; message: string; result?: Record<string, unknown> }> => {
     const res = await api.post('/collaboration/send', { fromAgent, toAgent, message, ...options });
     return res.data;
   },
 
-  broadcastMessage: async (message: string, targets: string[], channel?: string): Promise<{ success: boolean; message: string; results?: any[] }> => {
+  broadcastMessage: async (message: string, targets: string[], channel?: string): Promise<{ success: boolean; message: string; results?: Record<string, unknown>[] }> => {
     const res = await api.post('/collaboration/broadcast', { message, targets, channel });
     return res.data;
   },
@@ -460,7 +480,7 @@ export const apiService = {
     return res.data;
   },
 
-  triggerAutomationEvent: async (event: string, data?: any): Promise<{ success: boolean }> => {
+  triggerAutomationEvent: async (event: string, data?: Record<string, unknown>): Promise<{ success: boolean }> => {
     const res = await api.post('/automation/event', { event, data });
     return res.data;
   },
@@ -471,12 +491,12 @@ export const apiService = {
     return res.data;
   },
 
-  getWorkflows: async (): Promise<any[]> => {
+  getWorkflows: async (): Promise<WorkflowInfo[]> => {
     const res = await api.get('/workflow/workflows');
     return res.data;
   },
 
-  createWorkflow: async (workflow: any): Promise<any> => {
+  createWorkflow: async (workflow: { name: string; description?: string; steps: unknown[] }): Promise<WorkflowInfo> => {
     const res = await api.post('/workflow/workflows', workflow);
     return res.data;
   },
@@ -486,27 +506,27 @@ export const apiService = {
     return res.data;
   },
 
-  getTasks: async (limit = 50): Promise<any[]> => {
+  getTasks: async (limit = 50): Promise<TaskInfo[]> => {
     const res = await api.get('/workflow/tasks', { params: { limit } });
     return res.data;
   },
 
-  getWorkspaceStats: async (): Promise<any[]> => {
+  getWorkspaceStats: async (): Promise<WorkspaceStat[]> => {
     const res = await api.get('/workspace-manage/stats');
     return res.data;
   },
 
-  scanWorkspaces: async (): Promise<{ name: string; path: string; size: number }[]> => {
+  scanWorkspaces: async (): Promise<ScannedWorkspace[]> => {
     const res = await api.get('/workspace-manage/scan');
     return res.data;
   },
 
-  getWorkspaceBackups: async (): Promise<any[]> => {
+  getWorkspaceBackups: async (): Promise<WorkspaceBackup[]> => {
     const res = await api.get('/workspace-manage/backups');
     return res.data;
   },
 
-  createWorkspaceBackup: async (workspace: string): Promise<any> => {
+  createWorkspaceBackup: async (workspace: string): Promise<WorkspaceBackup> => {
     const res = await api.post('/workspace-manage/backups', { workspace });
     return res.data;
   },
@@ -521,17 +541,17 @@ export const apiService = {
     return res.data;
   },
 
-  getSkillStats: async (): Promise<any[]> => {
+  getSkillStats: async (): Promise<SkillStat[]> => {
     const res = await api.get('/skill-evaluation/stats');
     return res.data;
   },
 
-  getSkillEvalRecommendations: async (count = 5): Promise<any[]> => {
+  getSkillEvalRecommendations: async (count = 5): Promise<SkillRecommendation[]> => {
     const res = await api.get('/skill-evaluation/recommendations', { params: { count } });
     return res.data;
   },
 
-  analyzeSkill: async (skill: string): Promise<{ score: number; strengths: string[]; weaknesses: string[]; suggestions: string[] }> => {
+  analyzeSkill: async (skill: string): Promise<SkillAnalysis> => {
     const res = await api.get(`/skill-evaluation/analyze/${skill}`);
     return res.data;
   },
@@ -552,6 +572,41 @@ export const apiService = {
 
   getTrendingSkills: async (): Promise<GitHubSkillRecommendation[]> => {
     const res = await api.get('/skill-recommendation/trending');
+    return res.data;
+  },
+
+  searchSkillRecommendations: async (query: string): Promise<GitHubSkillRecommendation[]> => {
+    const res = await api.get('/skill-recommendation/search', { params: { q: query } });
+    return res.data;
+  },
+
+  getHealthCheckConfig: async (): Promise<HealthCheckConfig> => {
+    const res = await api.get('/health-check/config');
+    return res.data;
+  },
+
+  updateHealthCheckConfig: async (config: Partial<HealthCheckConfig>): Promise<HealthCheckConfig> => {
+    const res = await api.put('/health-check/config', config);
+    return res.data;
+  },
+
+  getHealthCheckStatus: async (): Promise<HealthCheckResult[]> => {
+    const res = await api.get('/health-check/status');
+    return res.data;
+  },
+
+  triggerHealthCheck: async (): Promise<HealthCheckResult[]> => {
+    const res = await api.post('/health-check/check');
+    return res.data;
+  },
+
+  resetHealthRecovery: async (serviceName: string): Promise<{ success: boolean }> => {
+    const res = await api.post(`/health-check/reset/${serviceName}`);
+    return res.data;
+  },
+
+  getHealthCheckHistory: async (limit = 100): Promise<HealthCheckHistoryEntry[]> => {
+    const res = await api.get('/health-check/history', { params: { limit } });
     return res.data;
   },
 };

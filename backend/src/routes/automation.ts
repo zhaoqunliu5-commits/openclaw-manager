@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { automationService } from '../services/automationService.js';
 
@@ -19,10 +20,25 @@ router.get('/rules/:id', (req, res) => {
 
 router.post('/rules', (req, res) => {
   try {
+    const { name, triggerType, triggerConfig, actionType, actionConfig } = req.body;
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({ error: 'name is required and must be a string' });
+      return;
+    }
+    const validTriggerTypes = ['cron', 'event', 'webhook'];
+    if (!validTriggerTypes.includes(triggerType)) {
+      res.status(400).json({ error: `triggerType must be one of: ${validTriggerTypes.join(', ')}` });
+      return;
+    }
+    const validActionTypes = ['command', 'notify', 'switch_agent', 'restart_service'];
+    if (!validActionTypes.includes(actionType)) {
+      res.status(400).json({ error: `actionType must be one of: ${validActionTypes.join(', ')}` });
+      return;
+    }
     const rule = automationService.createRule(req.body);
     res.json(rule);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -44,6 +60,10 @@ router.post('/rules/:id/execute', async (req, res) => {
 
 router.post('/event', (req, res) => {
   const { event, data } = req.body;
+  if (!event || typeof event !== 'string') {
+    res.status(400).json({ error: 'event is required and must be a string' });
+    return;
+  }
   automationService.triggerEvent(event, data);
   res.json({ success: true });
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Square, RotateCcw, Server, Activity, Clock, HardDrive, ExternalLink } from 'lucide-react';
-import type { ServiceStatus } from '../types';
+import type { ServiceStatus, LucideIcon } from '../types';
 
 interface ServiceCardProps {
   service: ServiceStatus;
@@ -12,7 +12,7 @@ interface ServiceCardProps {
   index?: number;
 }
 
-const StatusIndicator = ({ isRunning }: { isRunning: boolean }) => {
+const StatusIndicator = React.memo(({ isRunning }: { isRunning: boolean }) => {
   return (
     <div className="relative">
       <motion.div
@@ -41,16 +41,16 @@ const StatusIndicator = ({ isRunning }: { isRunning: boolean }) => {
       ></motion.div>
     </div>
   );
-};
+});
 
-const ActionButton = ({ 
+const ActionButton = React.memo(({ 
   icon: Icon, 
   label, 
   onClick, 
   variant, 
   disabled 
 }: { 
-  icon: any; 
+  icon: LucideIcon; 
   label: string; 
   onClick: () => void; 
   variant: 'start' | 'stop' | 'restart' | 'open';
@@ -88,9 +88,9 @@ const ActionButton = ({
       {label}
     </motion.button>
   );
-};
+});
 
-const ServiceCard: React.FC<ServiceCardProps> = ({ 
+const ServiceCard: React.FC<ServiceCardProps> = React.memo(({ 
   service, 
   onStart, 
   onStop, 
@@ -185,7 +185,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
                     <span>PID</span>
                   </div>
                   <div className="text-xl font-mono font-bold text-cyan-400">
-                    {service.pid || '-'}
+                    {service.pid != null ? service.pid : '-'}
                   </div>
                 </div>
                 
@@ -195,7 +195,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
                     <span>内存</span>
                   </div>
                   <div className="text-xl font-mono font-bold text-purple-400">
-                    {service.memory || '-'}
+                    {service.memory ?? '-'}
                   </div>
                 </div>
                 
@@ -205,7 +205,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
                     <span>运行时间</span>
                   </div>
                   <div className="text-xl font-mono font-bold text-orange-400">
-                    {service.uptime || '-'}
+                    {service.uptime ?? '-'}
                   </div>
                 </div>
               </div>
@@ -244,6 +244,6 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
       </div>
     </motion.div>
   );
-};
+});
 
 export default ServiceCard;

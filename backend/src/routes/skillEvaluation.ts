@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { skillEvaluationService } from '../services/skillEvaluationService.js';
 
@@ -12,8 +13,8 @@ router.get('/scan', async (_req, res) => {
   try {
     const skills = await skillEvaluationService.scanSkills();
     res.json(skills);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -23,8 +24,8 @@ router.post('/record', (req, res) => {
     if (!skill) { res.status(400).json({ error: 'skill is required' }); return; }
     skillEvaluationService.recordUsage(skill, success !== false, executionTimeMs);
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -37,8 +38,8 @@ router.put('/rating/:skill', (req, res) => {
     }
     skillEvaluationService.updateRating(req.params.skill, rating);
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -57,8 +58,8 @@ router.get('/analyze/:skill', async (req, res) => {
   try {
     const analysis = await skillEvaluationService.analyzeSkillPerformance(req.params.skill);
     res.json(analysis);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -68,8 +69,8 @@ router.post('/execute', async (req, res) => {
     if (!skill) { res.status(400).json({ error: 'skill is required' }); return; }
     const result = await skillEvaluationService.executeSkill(skill, params);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { workflowService } from '../services/workflowService.js';
 
@@ -11,8 +12,8 @@ router.post('/workflows', (req, res) => {
   try {
     const wf = workflowService.createWorkflow(req.body);
     res.json(wf);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -41,8 +42,8 @@ router.post('/workflows/:id/execute', async (req, res) => {
       priority: 100,
     });
     res.json({ success: true, taskId: task.id, message: 'Workflow queued for execution' });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -55,8 +56,8 @@ router.post('/tasks', (req, res) => {
   try {
     const task = workflowService.enqueueTask(req.body);
     res.json(task);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 });
 

@@ -1,5 +1,6 @@
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 
 const execAsync = promisify(exec);
 
@@ -14,12 +15,13 @@ export class WslService {
         { timeout }
       );
       return stdout + stderr;
-    } catch (error: any) {
-      if (error.stdout || error.stderr) {
-        return (error.stdout || '') + (error.stderr || '');
+    } catch (error: unknown) {
+      const errObj = error as { stdout?: string; stderr?: string };
+      if (errObj.stdout || errObj.stderr) {
+        return (errObj.stdout || '') + (errObj.stderr || '');
       }
       console.error('WSL command error:', error);
-      throw new Error(`WSL command failed: ${error.message}`);
+      throw new Error(`WSL command failed: ${getErrorMessage(error)}`);
     }
   }
 

@@ -47,6 +47,72 @@ const SEARCH_QUERIES: Record<string, { query: string; reason: string; category: 
 let searchCache: { data: GitHubSkill[]; timestamp: number } | null = null;
 const CACHE_TTL = 10 * 60 * 1000;
 
+const CHINESE_TO_ENGLISH: Record<string, string> = {
+  '搜索': 'search',
+  '代码审查': 'code review',
+  '代码': 'code',
+  '编程': 'programming',
+  '开发': 'development',
+  '写作': 'writing',
+  '创作': 'creative',
+  '小说': 'novel writing',
+  '图像': 'image generation',
+  '图片': 'image',
+  '自动化': 'automation',
+  '监控': 'monitor',
+  '安全': 'security',
+  '翻译': 'translation',
+  '对话': 'chat',
+  '聊天': 'chat',
+  '分析': 'analysis',
+  '数据': 'data',
+  '文档': 'document',
+  '测试': 'testing',
+  '部署': 'deploy',
+  '运维': 'devops',
+  '爬虫': 'crawler spider',
+  '总结': 'summarize',
+  '摘要': 'summary',
+  '邮件': 'email',
+  '通知': 'notification',
+  '日程': 'calendar schedule',
+  '音乐': 'music',
+  '视频': 'video',
+  '语音': 'voice audio',
+  '数学': 'math',
+  '科学': 'science',
+  '教育': 'education',
+  '游戏': 'game',
+  '天气': 'weather',
+  '新闻': 'news',
+  '理财': 'finance',
+  '法律': 'legal',
+  '医疗': 'medical health',
+  '设计': 'design',
+  '前端': 'frontend web',
+  '后端': 'backend server',
+  '数据库': 'database',
+  'API': 'api',
+  '工具': 'tool utility',
+  '助手': 'assistant agent',
+};
+
+function translateQuery(query: string): string {
+  let translated = query;
+  const sortedKeys = Object.keys(CHINESE_TO_ENGLISH).sort((a, b) => b.length - a.length);
+  for (const cn of sortedKeys) {
+    if (translated.includes(cn)) {
+      translated = translated.replace(new RegExp(cn, 'g'), CHINESE_TO_ENGLISH[cn]);
+    }
+  }
+  const hasChinese = /[\u4e00-\u9fff]/.test(translated);
+  if (hasChinese) {
+    translated = translated.replace(/[\u4e00-\u9fff]+/g, '').trim();
+    if (!translated) translated = query;
+  }
+  return translated || query;
+}
+
 export class SkillRecommendationService {
   static async getUserContext(): Promise<UserContext> {
     return DataCache.getOrFetch('skill-rec-context', async () => {
@@ -266,6 +332,22 @@ export class SkillRecommendationService {
     });
 
     return suggestions.slice(0, count);
+  }
+
+  static async searchUserSkills(query: string, count: number = 10): Promise<GitHubSkill[]> {
+    const ctx = await this.getUserContext();
+    const translatedQuery = translateQuery(query);
+    const results = await this.searchGitHub(`openclaw+skill+${encodeURIComponent(translatedQuery)}`);
+    const skills = results
+      .filter(item => !ctx.skills.some(s => item.full_name.includes(s)))
+      .map(item => this.resultToSkill(item, `搜索结果: ${query}`, 'search'));
+    const seen = new Set<string>();
+    const unique = skills.filter(s => {
+      if (seen.has(s.repo)) return false;
+      seen.add(s.repo);
+      return true;
+    });
+    return unique.slice(0, count);
   }
 
   static async getTrending(): Promise<GitHubSkill[]> {

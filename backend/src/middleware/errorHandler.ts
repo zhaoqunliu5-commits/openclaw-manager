@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return String(error);
+}
+
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
   res.on('finish', () => {
@@ -19,9 +25,9 @@ export function notFoundHandler(req: Request, res: Response): void {
   });
 }
 
-export function globalErrorHandler(err: any, req: Request, res: Response, next: NextFunction): void {
-  const status = err.status || err.statusCode || 500;
-  const message = status === 500 ? 'Internal server error' : err.message;
+export function globalErrorHandler(err: unknown, req: Request, res: Response, _next: NextFunction): void {
+  const status = (err as { status?: number; statusCode?: number }).status || (err as { status?: number; statusCode?: number }).statusCode || 500;
+  const message = status === 500 ? 'Internal server error' : getErrorMessage(err);
 
   if (status === 500) {
     console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err);
@@ -31,11 +37,11 @@ export function globalErrorHandler(err: any, req: Request, res: Response, next: 
     error: message,
     path: req.originalUrl,
     timestamp: new Date().toISOString(),
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    ...(process.env.NODE_ENV === 'development' && { stack: (err as Error).stack }),
   });
 }
 
-export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) {
+export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };

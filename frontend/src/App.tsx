@@ -1,5 +1,5 @@
-import { useState, lazy, Suspense } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from './api';
 import type { OperationLog } from './types';
@@ -7,12 +7,14 @@ import DashboardHeader from './components/DashboardHeader';
 import ServiceCard from './components/ServiceCard';
 import ConfigPanel from './components/ConfigPanel';
 import LogViewer from './components/LogViewer';
-import DetailPanel from './components/DetailPanel';
 import SkillRecommendationBar from './components/SkillRecommendationBar';
-import CommandPalette from './components/CommandPalette';
+import OnboardingGuide, { HelpDocPanel } from './components/OnboardingGuide';
+import { ToastProvider } from './components/ToastProvider';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useHotkeys } from './hooks/useHotkeys';
 
+const DetailPanel = lazy(() => import('./components/DetailPanel'));
+const CommandPalette = lazy(() => import('./components/CommandPalette'));
 const ModelPanel = lazy(() => import('./components/ModelPanel'));
 const MonitorPanel = lazy(() => import('./components/MonitorPanel'));
 const ConfigManagePanel = lazy(() => import('./components/ConfigManagePanel'));
@@ -24,6 +26,7 @@ const AutomationPanel = lazy(() => import('./components/AutomationPanel'));
 const WorkflowPanel = lazy(() => import('./components/WorkflowPanel'));
 const WorkspaceManagePanel = lazy(() => import('./components/WorkspaceManagePanel'));
 const SkillEvaluationPanel = lazy(() => import('./components/SkillEvaluationPanel'));
+const HealthCheckPanel = lazy(() => import('./components/HealthCheckPanel'));
 
 const SkeletonCard = ({ delay = 0 }: { delay?: number }) => (
   <motion.div
@@ -42,46 +45,48 @@ function App() {
   const queryClient = useQueryClient();
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [helpDocOpen, setHelpDocOpen] = useState(false);
 
-  useHotkeys(activePanel, setActivePanel, setCommandPaletteOpen);
+  useHotkeys(activePanel, setActivePanel, setCommandPaletteOpen, setHelpDocOpen);
 
-  const handlePanelToggle = (panel: string) => {
+  const handlePanelToggle = useCallback((panel: string) => {
     setActivePanel(prev => prev === panel ? null : panel);
-  };
+  }, []);
 
   const { data: overviewData, isLoading: overviewLoading } = useQuery({
     queryKey: ['overview'],
     queryFn: apiService.getOverview,
-    staleTime: 15000,
-    refetchInterval: 30000,
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
 
   const { data: services, isLoading: servicesLoading } = useQuery({
     queryKey: ['services'],
     queryFn: apiService.getServices,
-    staleTime: 10000,
+    staleTime: 20000,
     refetchInterval: 30000,
   });
 
   const { data: config, isLoading: configLoading } = useQuery({
     queryKey: ['config'],
     queryFn: apiService.getConfig,
-    staleTime: 30000,
+    staleTime: 60000,
   });
 
   const { data: logs, isLoading: logsLoading } = useQuery({
     queryKey: ['logs'],
     queryFn: apiService.getLogs,
-    staleTime: 10000,
+    staleTime: 20000,
     refetchInterval: 30000,
   });
 
   const { data: modelProviders = [] } = useQuery({
     queryKey: ['modelProviders'],
     queryFn: apiService.getModelProviders,
+    staleTime: 60000,
   });
 
-  const modelCount = modelProviders.reduce((sum, p) => sum + (p.models?.length || 0), 0);
+  const modelCount = useMemo(() => modelProviders.reduce((sum, p) => sum + (p.models?.length || 0), 0), [modelProviders]);
 
   const startMutation = useMutation({
     mutationFn: (name: string) => apiService.startService(name),
@@ -116,17 +121,17 @@ function App() {
     }
   });
 
-  const handleStart = (name: string) => { startMutation.mutate(name); };
-  const handleStop = (name: string) => { stopMutation.mutate(name); };
-  const handleRestart = (name: string) => { restartMutation.mutate(name); };
+  const handleStart = useCallback((name: string) => { startMutation.mutate(name); }, [startMutation]);
+  const handleStop = useCallback((name: string) => { stopMutation.mutate(name); }, [stopMutation]);
+  const handleRestart = useCallback((name: string) => { restartMutation.mutate(name); }, [restartMutation]);
 
-  const getServiceLoadingState = (serviceName: string) => {
+  const getServiceLoadingState = useCallback((serviceName: string) => {
     return (
       (startMutation.isPending && startMutation.variables === serviceName) ||
       (stopMutation.isPending && stopMutation.variables === serviceName) ||
       (restartMutation.isPending && restartMutation.variables === serviceName)
     );
-  };
+  }, [startMutation.isPending, startMutation.variables, stopMutation.isPending, stopMutation.variables, restartMutation.isPending, restartMutation.variables]);
 
   const defaultOverview = { agentCount: 0, skillCount: 0, workspaceCount: 0, runningServiceCount: 0 };
   const defaultServices = [
@@ -137,9 +142,24 @@ function App() {
   const defaultLogs: OperationLog[] = [];
 
   return (
+    <ToastProvider>
     <ErrorBoundary>
+    <OnboardingGuide />
+    <AnimatePresence>
+      {helpDocOpen && <HelpDocPanel onClose={() => setHelpDocOpen(false)} />}
+    </AnimatePresence>
     <div className="min-h-screen p-6 md:p-8 relative z-10">
-      <CommandPalette isOpen={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+      <Suspense fallback={null}>
+        <CommandPalette isOpen={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+      </Suspense>
+      <button
+        onClick={() => setHelpDocOpen(true)}
+        className="fixed top-4 right-4 z-40 p-2.5 bg-gray-900/80 backdrop-blur border border-white/10 rounded-xl hover:bg-white/10 transition-colors group"
+        title="帮助文档 (?)"
+      >
+        <span className="text-lg">📖</span>
+        <span className="absolute -bottom-6 right-0 text-[9px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">按 ? 打开</span>
+      </button>
       <div className="max-w-7xl mx-auto">
         {overviewLoading ? (
           <motion.div
@@ -160,10 +180,12 @@ function App() {
 
         {activePanel && activePanel !== 'services' && activePanel !== 'models' && activePanel !== 'monitor' && activePanel !== 'config-manage' && activePanel !== 'skill-enhance' && activePanel !== 'memory' && activePanel !== 'collaboration' && activePanel !== 'settings' && activePanel !== 'automation' && activePanel !== 'workflow' && activePanel !== 'workspace-manage' && activePanel !== 'skill-evaluation' && (
           <div className="mb-8">
-            <DetailPanel
-              panelType={activePanel as 'agents' | 'skills' | 'workspaces'}
-              onClose={() => setActivePanel(null)}
-            />
+            <Suspense fallback={<SkeletonCard delay={0} />}>
+              <DetailPanel
+                panelType={activePanel as 'agents' | 'skills' | 'workspaces'}
+                onClose={() => setActivePanel(null)}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -280,6 +302,12 @@ function App() {
           )}
         </div>
 
+        <div className="mb-8">
+          <Suspense fallback={<SkeletonCard delay={0.15} />}>
+            <HealthCheckPanel />
+          </Suspense>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {configLoading ? (
             <SkeletonCard delay={0.3} />
@@ -305,6 +333,7 @@ function App() {
       </div>
     </div>
     </ErrorBoundary>
+    </ToastProvider>
   );
 }
 

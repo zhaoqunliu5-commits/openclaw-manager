@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../api';
-import type { AppNotification } from '../types';
+import type { AppNotification, LucideIcon } from '../types';
 
 const NotificationBell: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,8 +22,8 @@ const NotificationBell: React.FC = () => {
   const { data: unreadData } = useQuery({
     queryKey: ['unreadCount'],
     queryFn: apiService.getUnreadCount,
-    staleTime: 15000,
-    refetchInterval: 30000,
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
 
   const markReadMutation = useMutation({
@@ -81,7 +81,7 @@ const NotificationBell: React.FC = () => {
 
   const unreadCount = unreadData?.count ?? allNotifications.filter(n => !n.read).length;
 
-  const typeConfig: Record<string, { icon: any; color: string; bg: string }> = {
+  const typeConfig: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
     service_status: { icon: Radio, color: 'text-blue-400', bg: 'bg-blue-500/10' },
     agent_switch: { icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10' },
     error: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
@@ -151,7 +151,7 @@ const NotificationBell: React.FC = () => {
 
               <div className="max-h-80 overflow-y-auto">
                 {allNotifications.length === 0 ? (
-                  <div className="py-8 text-center text-gray-500 text-sm">暂无通知</div>
+                  <div className="py-8 text-center text-gray-500 text-sm">暂无通知，系统事件和告警会出现在这里</div>
                 ) : (
                   allNotifications.map(n => {
                     const config = typeConfig[n.type] || typeConfig.info;

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, Play, Square, RotateCcw, ArrowRightLeft, Clock, CheckCircle2, XCircle, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Terminal, Play, Square, RotateCcw, ArrowRightLeft, Clock, CheckCircle2, XCircle, Loader2, Wifi, WifiOff, Download } from 'lucide-react';
 import type { OperationLog } from '../types';
+import { exportData } from '../utils/export';
 
 interface LogViewerProps {
   logs: OperationLog[];
@@ -64,7 +65,7 @@ const LogLine = ({ log, index }: { log: OperationLog; index: number }) => {
   );
 };
 
-const LogViewer: React.FC<LogViewerProps> = ({ logs }) => {
+const LogViewer: React.FC<LogViewerProps> = React.memo(({ logs }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [liveLines, setLiveLines] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
@@ -125,6 +126,15 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs }) => {
             )}
             <span className="text-xs text-gray-500">{connected ? '实时' : '离线'}</span>
             <span className="text-xs text-gray-500 ml-2">{logs.length} 条记录</span>
+            {logs.length > 0 && (
+              <button
+                onClick={() => exportData(logs, 'openclaw-operations', 'csv')}
+                className="ml-2 p-1 hover:bg-white/10 rounded transition-colors"
+                title="导出 CSV"
+              >
+                <Download className="w-3.5 h-3.5 text-gray-400" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -159,7 +169,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs }) => {
             {logs.length === 0 && liveLines.length === 0 ? (
               <div className="text-gray-500 text-center py-12 flex flex-col items-center gap-3">
                 <Terminal className="w-10 h-10 opacity-30" />
-                <span className="text-sm">暂无操作记录</span>
+                <span className="text-sm">暂无操作记录，执行操作后日志会出现在这里</span>
                 <span className="text-xs text-gray-600">在 UI 中的操作会自动记录到这里</span>
               </div>
             ) : (
@@ -191,6 +201,6 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs }) => {
       </div>
     </motion.div>
   );
-};
+});
 
 export default LogViewer;

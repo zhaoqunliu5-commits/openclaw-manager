@@ -89,7 +89,7 @@ const ConfigManagePanel: React.FC = () => {
   });
 
   const updateSectionMutation = useMutation({
-    mutationFn: ({ section, data }: { section: string; data: any }) => apiService.updateConfigSection(section, data),
+    mutationFn: ({ section, data }: { section: string; data: Record<string, unknown> }) => apiService.updateConfigSection(section, data),
     onSuccess: () => {
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ['configSections'] });
@@ -99,7 +99,7 @@ const ConfigManagePanel: React.FC = () => {
   });
 
   const importMutation = useMutation({
-    mutationFn: ({ config, merge }: { config: any; merge: boolean }) => apiService.importConfig(config, merge),
+    mutationFn: ({ config, merge }: { config: Record<string, unknown>; merge: boolean }) => apiService.importConfig(config, merge),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['configSections'] });
       refetchBackups();
@@ -274,7 +274,7 @@ const ConfigManagePanel: React.FC = () => {
                   <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
                 </div>
               ) : backups.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-sm">暂无备份记录</div>
+                <div className="text-center py-8 text-gray-500 text-sm">暂无备份记录，创建备份后可以随时还原配置</div>
               ) : (
                 <div className="space-y-2">
                   {backups.map(backup => (
@@ -574,10 +574,11 @@ const HotReloadTab: React.FC = () => {
     try {
       const result = await apiService.hotReloadConfig();
       setReloadResult(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '热重载失败';
       setReloadResult({
         success: false,
-        results: [{ service: 'unknown', success: false, message: error.message || '热重载失败' }],
+        results: [{ service: 'unknown', success: false, message: msg }],
         timestamp: new Date().toISOString(),
       });
     } finally {

@@ -1,5 +1,6 @@
 import { WslService } from './wslService.js';
 import { appConfig } from '../config.js';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -100,8 +101,8 @@ print('ok')
         return { success: true, message: `默认 Agent 已设置为 ${agent}` };
       }
       return { success: false, message: output.trim() };
-    } catch (error: any) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) };
     }
   }
 
@@ -130,8 +131,8 @@ print('ok')
       this.settings.autoStartServices = enabled;
       this.save();
       return { success: true, message: enabled ? '已启用自动启动' : '已禁用自动启动' };
-    } catch (error: any) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) };
     }
   }
 }

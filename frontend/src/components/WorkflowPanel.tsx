@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../api';
+import type { WorkflowInfo, TaskInfo } from '../types';
 import { Play, Pause, Trash2, Clock, CheckCircle2, XCircle, Loader2, Workflow } from 'lucide-react';
 
 interface WorkflowStep {
@@ -18,17 +19,17 @@ export default function WorkflowPanel() {
   const [showCreate, setShowCreate] = useState(false);
   const [newSteps, setNewSteps] = useState<WorkflowStep[]>([]);
 
-  const { data: workflows = [] } = useQuery({
+  const { data: workflows = [] } = useQuery<WorkflowInfo[]>({
     queryKey: ['workflows'],
     queryFn: apiService.getWorkflows,
-    staleTime: 15000,
+    staleTime: 30000,
     refetchInterval: 60000,
   });
 
-  const { data: tasks = [] } = useQuery({
+  const { data: tasks = [] } = useQuery<TaskInfo[]>({
     queryKey: ['workflow-tasks'],
     queryFn: () => apiService.getTasks(20),
-    staleTime: 10000,
+    staleTime: 20000,
     refetchInterval: 30000,
   });
 
@@ -196,10 +197,10 @@ export default function WorkflowPanel() {
             <Play className="w-5 h-5 text-cyan-400" /> 工作流列表
           </h3>
           {workflows.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 text-sm">暂无工作流</div>
+            <div className="text-center py-8 text-gray-500 text-sm">暂无工作流，点击上方「+」按钮创建你的第一个工作流</div>
           ) : (
             <div className="space-y-3">
-              {workflows.map((wf: any) => (
+              {workflows.map((wf: WorkflowInfo) => (
                 <div key={wf.id} className="bg-gray-800/50 rounded-xl p-4 flex items-center justify-between">
                   <div>
                     <h4 className="text-white font-medium">{wf.name}</h4>
@@ -231,10 +232,10 @@ export default function WorkflowPanel() {
             <Clock className="w-5 h-5 text-orange-400" /> 任务队列
           </h3>
           {tasks.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 text-sm">暂无任务</div>
+            <div className="text-center py-8 text-gray-500 text-sm">暂无任务，执行工作流后任务会出现在这里</div>
           ) : (
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {tasks.map((task: any) => (
+              {tasks.map((task: TaskInfo) => (
                 <div key={task.id} className="bg-gray-800/50 rounded-lg p-3 flex items-center gap-3">
                   {statusIcon(task.status)}
                   <div className="flex-1 min-w-0">

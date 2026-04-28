@@ -199,7 +199,7 @@ const ModelPanel: React.FC = () => {
             <RefreshCw className="w-6 h-6 text-pink-400 animate-spin" />
           </div>
         ) : providers.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 text-sm">暂无模型提供商</div>
+          <div className="text-center py-8 text-gray-500 text-sm">暂无模型提供商，请检查 OpenClaw 配置文件中的 providers 设置</div>
         ) : (
           <div className="space-y-2 mt-3">
             {providers.map(provider => (

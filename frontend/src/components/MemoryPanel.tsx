@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain, Search, Trash2, RefreshCw, FileText, Database,
-  CheckCircle2, XCircle, Loader2, Clock
+  CheckCircle2, XCircle, Loader2, Clock, Download, AlertCircle, WifiOff
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../api';
+import { exportData } from '../utils/export';
 
 const MemoryPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'status' | 'entries' | 'recall' | 'search' | 'sessions'>('status');
@@ -15,6 +16,12 @@ const MemoryPanel: React.FC = () => {
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const queryClient = useQueryClient();
+
+  const { data: diagnostic, isLoading: diagLoading, refetch: refetchDiag } = useQuery({
+    queryKey: ['memoryDiagnostic'],
+    queryFn: apiService.getMemoryDiagnostic,
+    staleTime: 30000,
+  });
 
   const { data: statusList = [], isLoading: statusLoading } = useQuery({
     queryKey: ['memoryStatus'],
@@ -82,7 +89,9 @@ const MemoryPanel: React.FC = () => {
     setFileContent(data.content);
   };
 
-  const agents = statusList.map(s => s.agent);
+  const agents = statusList.length > 0
+    ? statusList.map(s => s.agent)
+    : (diagnostic?.agents || []);
   if (!agents.includes(selectedAgent) && agents.length > 0) {
     setSelectedAgent(agents[0]);
   }
@@ -140,6 +149,14 @@ const MemoryPanel: React.FC = () => {
             {reindexMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
             重建索引
           </button>
+          <button
+            onClick={() => exportData(entries, `openclaw-memory-${selectedAgent}`, 'json')}
+            disabled={entries.length === 0}
+            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-30"
+            title="导出记忆数据"
+          >
+            <Download className="w-3.5 h-3.5 text-gray-400" />
+          </button>
         </div>
       </div>
 
@@ -180,9 +197,43 @@ const MemoryPanel: React.FC = () => {
         <AnimatePresence mode="wait">
           {activeTab === 'status' && (
             <motion.div key="status" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
-              {statusLoading ? (
+              {statusLoading || diagLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <RefreshCw className="w-5 h-5 text-cyan-400 animate-spin" />
+                </div>
+              ) : diagnostic && !diagnostic.wslAvailable ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                  <WifiOff className="w-8 h-8 mb-3 text-gray-600" />
+                  <p className="text-sm mb-1">WSL 不可用</p>
+                  <p className="text-xs text-gray-600 mb-3">记忆功能依赖 WSL 环境访问 OpenClaw 数据，请确保 WSL 已安装并运行</p>
+                  <button
+                    onClick={() => { refetchDiag(); queryClient.invalidateQueries({ queryKey: ['memoryStatus'] }); }}
+                    className="px-3 py-1.5 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs hover:bg-cyan-500/30 transition-colors"
+                  >
+                    重新检测
+                  </button>
+                </div>
+              ) : diagnostic && diagnostic.error && statusList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                  <AlertCircle className="w-8 h-8 mb-3 text-gray-600" />
+                  <p className="text-sm mb-1">{diagnostic.error}</p>
+                  <p className="text-xs text-gray-600 mb-3">
+                    {diagnostic.agents.length > 0
+                      ? `检测到 ${diagnostic.agents.length} 个 Agent 目录，但未获取到记忆状态`
+                      : '请确保 OpenClaw 已正确安装并初始化'}
+                  </p>
+                  <button
+                    onClick={() => { refetchDiag(); queryClient.invalidateQueries({ queryKey: ['memoryStatus'] }); }}
+                    className="px-3 py-1.5 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs hover:bg-cyan-500/30 transition-colors"
+                  >
+                    重新检测
+                  </button>
+                </div>
+              ) : statusList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                  <Brain className="w-8 h-8 mb-3 text-gray-600" />
+                  <p className="text-sm mb-1">暂无记忆数据</p>
+                  <p className="text-xs text-gray-600">与 Agent 对话后，记忆数据会自动保存在此</p>
                 </div>
               ) : (
                 <div className="space-y-3">

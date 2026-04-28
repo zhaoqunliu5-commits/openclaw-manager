@@ -2,19 +2,20 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../api';
+import type { SkillStat, SkillRecommendation, SkillAnalysis } from '../types';
 import { Sparkles, TrendingUp, Star, Clock, Zap, AlertTriangle, Play, ThumbsUp } from 'lucide-react';
 
 export default function SkillEvaluationPanel() {
   const queryClient = useQueryClient();
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<SkillAnalysis | null>(null);
 
-  const { data: stats = [] } = useQuery({
+  const { data: stats = [] } = useQuery<SkillStat[]>({
     queryKey: ['skill-stats'],
     queryFn: apiService.getSkillStats,
   });
 
-  const { data: recommendations = [] } = useQuery({
+  const { data: recommendations = [] } = useQuery<SkillRecommendation[]>({
     queryKey: ['skill-recommendations'],
     queryFn: () => apiService.getSkillEvalRecommendations(5),
   });
@@ -85,7 +86,7 @@ export default function SkillEvaluationPanel() {
             </div>
           ) : (
             <div className="space-y-3">
-              {stats.slice(0, 10).map((skill: any, index: number) => (
+              {stats.slice(0, 10).map((skill: SkillStat, index: number) => (
                 <motion.div
                   key={skill.skill}
                   initial={{ opacity: 0, x: -20 }}
@@ -165,10 +166,10 @@ export default function SkillEvaluationPanel() {
             <Star className="w-5 h-5 text-yellow-400" /> 推荐技能
           </h3>
           {recommendations.length === 0 ? (
-            <div className="text-center py-6 text-gray-500 text-sm">暂无推荐</div>
+            <div className="text-center py-6 text-gray-500 text-sm">暂无推荐，使用更多技能后系统会自动推荐</div>
           ) : (
             <div className="space-y-3">
-              {recommendations.map((skill: any) => (
+              {recommendations.map((skill: SkillRecommendation) => (
                 <div
                   key={skill.skill}
                   className="bg-gray-800/50 rounded-lg p-3 cursor-pointer hover:bg-gray-700/50 transition-all"

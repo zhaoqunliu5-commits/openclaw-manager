@@ -1,10 +1,40 @@
 import { WslService } from './wslService.js';
 import { appConfig } from '../config.js';
 import { DataCache } from './dataCache.js';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import type { SkillDetail } from '../types/index.js';
 
 const OPENCLAW_PATH = appConfig.openclawPath;
 const SKILLS_DIR = `${OPENCLAW_PATH}/skills`;
+
+const CN_TO_EN: Record<string, string> = {
+  '搜索': 'search', '代码审查': 'code review', '代码': 'code', '编程': 'programming',
+  '开发': 'development', '写作': 'writing', '创作': 'creative', '图像': 'image generation',
+  '图片': 'image', '自动化': 'automation', '监控': 'monitor', '安全': 'security',
+  '翻译': 'translation', '对话': 'chat', '聊天': 'chat', '分析': 'analysis',
+  '数据': 'data', '文档': 'document', '测试': 'testing', '部署': 'deploy',
+  '运维': 'devops', '爬虫': 'crawler spider', '总结': 'summarize', '邮件': 'email',
+  '通知': 'notification', '音乐': 'music', '视频': 'video', '语音': 'voice audio',
+  '数学': 'math', '教育': 'education', '游戏': 'game', '工具': 'tool utility',
+  '助手': 'assistant agent', '前端': 'frontend web', '后端': 'backend server',
+  '数据库': 'database',
+};
+
+function translateChineseQuery(query: string): string {
+  let translated = query;
+  const sortedKeys = Object.keys(CN_TO_EN).sort((a, b) => b.length - a.length);
+  for (const cn of sortedKeys) {
+    if (translated.includes(cn)) {
+      translated = translated.replace(new RegExp(cn, 'g'), CN_TO_EN[cn]);
+    }
+  }
+  const hasChinese = /[\u4e00-\u9fff]/.test(translated);
+  if (hasChinese) {
+    translated = translated.replace(/[\u4e00-\u9fff]+/g, '').trim();
+    if (!translated) translated = query;
+  }
+  return translated || query;
+}
 
 async function runPythonScript(script: string, timeout: number = 15000): Promise<string> {
   const tmpFile = `/tmp/oc_skill_${Date.now()}.py`;
@@ -364,14 +394,38 @@ print(json.dumps(deps_map, ensure_ascii=False))
   }
 
   static async searchClawhub(query: string): Promise<any[]> {
+    const safeQuery = query.replace(/"/g, '').replace(/[`;$|]/g, '');
+    const translatedQuery = translateChineseQuery(safeQuery);
+
     try {
-      const safeQuery = query.replace(/"/g, '');
       const output = await WslService.execCommand(`openclaw skills search "${safeQuery}" --json 2>/dev/null || openclaw skills search "${safeQuery}" 2>/dev/null`, 30000);
       try {
-        return JSON.parse(output.trim());
-      } catch {
-        return [];
-      }
+        const parsed = JSON.parse(output.trim());
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch { }
+    } catch { }
+
+    try {
+      const encodedQuery = encodeURIComponent(`openclaw skill ${translatedQuery}`);
+      const url = `https://api.github.com/search/repositories?q=${encodedQuery}&sort=stars&order=desc&per_page=10`;
+      const response = await fetch(url, {
+        headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'OpenClaw-Manager' },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) return [];
+      const data = await response.json() as { items?: any[] };
+      if (!data.items || data.items.length === 0) return [];
+
+      return data.items.map((repo: any) => ({
+        slug: repo.name,
+        name: repo.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        description: repo.description || '',
+        emoji: '📦',
+        source: 'github',
+        homepage: repo.html_url,
+        stars: repo.stargazers_count || 0,
+        owner: repo.owner?.login || '',
+      }));
     } catch {
       return [];
     }
@@ -382,8 +436,8 @@ print(json.dumps(deps_map, ensure_ascii=False))
       const safeSlug = slug.replace(/"/g, '');
       const output = await WslService.execCommand(`openclaw skills install "${safeSlug}" 2>&1`, 60000);
       return { success: true, message: output.substring(0, 500) };
-    } catch (error: any) {
-      return { success: false, message: error?.message || 'Install failed' };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) || 'Install failed' };
     }
   }
 

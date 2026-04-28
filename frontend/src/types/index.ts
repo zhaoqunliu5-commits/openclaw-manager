@@ -157,8 +157,8 @@ export interface ConfigBackup {
 
 export interface ConfigDiff {
   path: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
   type: 'added' | 'removed' | 'changed';
 }
 
@@ -355,4 +355,133 @@ export interface GitHubSkillRecommendation {
   category: string;
   reason: string;
   installCommand: string;
+}
+
+export interface WorkspaceStat {
+  workspace: string;
+  accessCount: number;
+  totalSessions: number;
+  avgSessionDuration: number;
+  lastAccess: string | null;
+}
+
+export interface WorkspaceBackup {
+  id: number;
+  workspace: string;
+  backupPath: string;
+  sizeBytes: number | null;
+  createdAt: string;
+}
+
+export interface ScannedWorkspace {
+  name: string;
+  path: string;
+  size: number;
+}
+
+export interface SkillStat {
+  skill: string;
+  useCount: number;
+  successCount: number;
+  successRate: number;
+  avgExecutionTimeMs: number | null;
+  lastUsed: string | null;
+  rating: number;
+}
+
+export interface SkillRecommendation {
+  skill: string;
+  useCount: number;
+  successRate: number;
+  rating: number;
+}
+
+export interface SkillAnalysis {
+  score: number;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+}
+
+export interface WorkflowInfo {
+  id: number;
+  name: string;
+  description: string | null;
+  steps: WorkflowStep[];
+  currentStep: number;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'paused' | 'idle';
+  agentId: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface TaskInfo {
+  id: number;
+  workflowId: number | null;
+  name: string;
+  priority: number;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  inputData: string | null;
+  result: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface SearchResultItem {
+  slug: string;
+  name: string;
+  description: string;
+  emoji: string;
+  version: string;
+  author: string;
+  rating: number;
+  downloads: number;
+  source?: string;
+  homepage?: string;
+  stars?: number;
+  owner?: string;
+}
+
+export type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string }>;
+
+export interface HealthCheckConfig {
+  enabled: boolean;
+  intervalMs: number;
+  autoRecover: boolean;
+  maxRestartAttempts: number;
+  restartCooldownMs: number;
+  services: {
+    name: string;
+    enabled: boolean;
+  }[];
+}
+
+export interface HealthCheckResult {
+  serviceName: string;
+  healthy: boolean;
+  lastCheck: string;
+  consecutiveFailures: number;
+  lastFailure: string | null;
+  lastRecovery: string | null;
+  recoveryAttempts: number;
+  status: 'healthy' | 'degraded' | 'down' | 'recovering' | 'disabled';
+}
+
+export interface HealthCheckHistoryEntry {
+  id: number;
+  service_name: string;
+  healthy: number;
+  response_time_ms: number | null;
+  details: string | null;
+  checked_at: string;
+}
+
+export interface MemoryDiagnostic {
+  wslAvailable: boolean;
+  openclawPathExists: boolean;
+  agentsDirExists: boolean;
+  agents: string[];
+  error?: string;
 }

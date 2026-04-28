@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { SkillEnhanceService } from '../services/skillEnhanceService.js';
 
@@ -7,8 +8,8 @@ router.get('/installed', async (_req, res) => {
   try {
     const skills = await SkillEnhanceService.getInstalledSkills();
     res.json(skills);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get installed skills', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get installed skills', message: getErrorMessage(error) });
   }
 });
 
@@ -20,8 +21,8 @@ router.get('/detail/:slug', async (req, res) => {
       return;
     }
     res.json(skill);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get skill detail', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get skill detail', message: getErrorMessage(error) });
   }
 });
 
@@ -29,8 +30,8 @@ router.get('/file/:slug/:filename', async (req, res) => {
   try {
     const content = await SkillEnhanceService.getSkillFile(req.params.slug, req.params.filename);
     res.json({ content });
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get skill file', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get skill file', message: getErrorMessage(error) });
   }
 });
 
@@ -43,8 +44,8 @@ router.put('/file/:slug/:filename', async (req, res) => {
     }
     const result = await SkillEnhanceService.updateSkillConfig(req.params.slug, req.params.filename, content);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to update skill file', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to update skill file', message: getErrorMessage(error) });
   }
 });
 
@@ -52,8 +53,8 @@ router.get('/dependencies', async (_req, res) => {
   try {
     const deps = await SkillEnhanceService.getSkillDependencies();
     res.json(deps);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get dependencies', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get dependencies', message: getErrorMessage(error) });
   }
 });
 
@@ -66,8 +67,8 @@ router.get('/search', async (req, res) => {
     }
     const results = await SkillEnhanceService.searchClawhub(query);
     res.json(results);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to search skills', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to search skills', message: getErrorMessage(error) });
   }
 });
 
@@ -80,8 +81,8 @@ router.post('/install', async (req, res) => {
     }
     const result = await SkillEnhanceService.installSkill(slug);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to install skill', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to install skill', message: getErrorMessage(error) });
   }
 });
 
@@ -89,8 +90,8 @@ router.delete('/uninstall/:slug', async (req, res) => {
   try {
     const result = await SkillEnhanceService.uninstallSkill(req.params.slug);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to uninstall skill', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to uninstall skill', message: getErrorMessage(error) });
   }
 });
 

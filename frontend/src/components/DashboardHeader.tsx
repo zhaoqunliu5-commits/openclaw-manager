@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Cpu, Zap, Layers, Activity, Terminal, ChevronDown, Sparkles, Monitor, Settings, Package, Brain, Users, Bot } from 'lucide-react';
-import type { OverviewData } from '../types';
+import type { OverviewData, LucideIcon } from '../types';
 import NotificationBell from './NotificationBell';
 
 interface DashboardHeaderProps {
@@ -11,7 +11,7 @@ interface DashboardHeaderProps {
   modelCount?: number;
 }
 
-const AnimatedCounter = ({ value }: { value: number }) => {
+const AnimatedCounter = React.memo(({ value }: { value: number }) => {
   return (
     <motion.span
       initial={{ opacity: 0, y: 10 }}
@@ -28,9 +28,9 @@ const AnimatedCounter = ({ value }: { value: number }) => {
       </motion.span>
     </motion.span>
   );
-};
+});
 
-const StatCard = ({ 
+const StatCard = React.memo(({ 
   icon: Icon, 
   value, 
   label, 
@@ -39,7 +39,7 @@ const StatCard = ({
   isActive,
   onToggle,
 }: { 
-  icon: any; 
+  icon: LucideIcon;
   value: number | string; 
   label: string; 
   color: string;
@@ -85,7 +85,7 @@ const StatCard = ({
       </div>
     </motion.button>
   );
-};
+});
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ data, activePanel, onPanelToggle, modelCount = 0 }) => {
   return (

@@ -45,7 +45,7 @@ const TagItem = ({ label, color }: { label: string; color: string }) => {
   );
 };
 
-const ConfigPanel: React.FC<ConfigPanelProps> = ({ config }) => {
+const ConfigPanel: React.FC<ConfigPanelProps> = React.memo(({ config }) => {
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -128,6 +128,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config }) => {
       </div>
     </motion.div>
   );
-};
+});
 
 export default ConfigPanel;

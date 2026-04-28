@@ -52,6 +52,10 @@ export class DbService {
     const dbPath = join(dataDir, 'openclaw-manager.db');
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
+    this.db.pragma('synchronous = NORMAL');
+    this.db.pragma('cache_size = -64000');
+    this.db.pragma('foreign_keys = ON');
+    this.db.pragma('busy_timeout = 5000');
     this.initializeTables();
   }
 
@@ -90,7 +94,7 @@ export class DbService {
       ORDER BY timestamp DESC
       LIMIT ?
     `);
-    const rows = stmt.all(limit) as any[];
+    const rows = stmt.all(limit) as OperationLog[];
     return rows.map(row => ({
       id: row.id,
       operationType: row.operationType,
@@ -112,7 +116,7 @@ export class DbService {
       FROM operations
       WHERE id = ?
     `);
-    const row = stmt.get(id) as any;
+    const row = stmt.get(id) as OperationLog | undefined;
     if (!row) return null;
     return {
       id: row.id,
@@ -190,7 +194,7 @@ export class DbService {
   }
 
   getUnreadNotificationCount(): number {
-    const row = this.db.prepare(`SELECT COUNT(*) as count FROM notifications WHERE read = 0`).get() as any;
+    const row = this.db.prepare(`SELECT COUNT(*) as count FROM notifications WHERE read = 0`).get() as { count: number };
     return row.count;
   }
 

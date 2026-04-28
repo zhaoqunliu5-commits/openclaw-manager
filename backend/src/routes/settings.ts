@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router, type Request, type Response } from 'express';
 import { settingsService } from '../services/settingsService.js';
 
@@ -16,8 +17,8 @@ router.get('/agents', async (_req: Request, res: Response) => {
   try {
     const agents = await settingsService.getAvailableAgents();
     res.json(agents);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get agents', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get agents', message: getErrorMessage(error) });
   }
 });
 
@@ -30,8 +31,8 @@ router.put('/default-agent', async (req: Request, res: Response) => {
     }
     const result = await settingsService.setDefaultAgent(agent);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to set default agent', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to set default agent', message: getErrorMessage(error) });
   }
 });
 
@@ -44,8 +45,8 @@ router.put('/auto-start', async (req: Request, res: Response) => {
     }
     const result = await settingsService.setAutoStart(enabled);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to set auto start', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to set auto start', message: getErrorMessage(error) });
   }
 });
 

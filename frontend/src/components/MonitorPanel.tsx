@@ -3,14 +3,70 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, Cpu, HardDrive, Clock, Zap, ChevronDown, ChevronRight,
   RefreshCw, Server, Brain, MessageSquare, Database,
-  CheckCircle2, XCircle, AlertCircle
+  CheckCircle2, XCircle, AlertCircle, WifiOff, Download
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../api';
-import type { GatewayMetrics } from '../types';
+import type { GatewayMetrics, SystemResources } from '../types';
+import { exportData } from '../utils/export';
+
+const safeNum = (val: unknown, fallback: number = 0): number => {
+  if (val === null || val === undefined) return fallback;
+  const n = typeof val === 'number' ? val : Number(val);
+  return isNaN(n) ? fallback : n;
+};
+
+const safeStr = (val: unknown, fallback: string = '-'): string => {
+  if (val === null || val === undefined || val === '') return fallback;
+  return String(val);
+};
+
+const defaultGatewayMetrics: GatewayMetrics = {
+  pid: 0,
+  memoryMB: 0,
+  cpuPercent: 0,
+  uptime: '0',
+  status: 'stopped',
+};
+
+const defaultSystemResources: SystemResources = {
+  gateway: { ...defaultGatewayMetrics },
+  canvas: { ...defaultGatewayMetrics },
+  totalMemoryMB: 0,
+  totalSessions: 0,
+  totalSessionSizeMB: 0,
+  memoryFiles: 0,
+  memorySizeKB: 0,
+  taskCount: 0,
+};
+
+const normalizeMetrics = (m: Partial<GatewayMetrics> | undefined): GatewayMetrics => {
+  if (!m) return { ...defaultGatewayMetrics };
+  return {
+    pid: safeNum(m.pid),
+    memoryMB: safeNum(m.memoryMB),
+    cpuPercent: safeNum(m.cpuPercent),
+    uptime: safeStr(m.uptime, '0'),
+    status: m.status === 'running' ? 'running' : 'stopped',
+  };
+};
+
+const normalizeResources = (r: Partial<SystemResources> | undefined | null): SystemResources => {
+  if (!r) return { ...defaultSystemResources };
+  return {
+    gateway: normalizeMetrics(r.gateway),
+    canvas: normalizeMetrics(r.canvas),
+    totalMemoryMB: safeNum(r.totalMemoryMB),
+    totalSessions: safeNum(r.totalSessions),
+    totalSessionSizeMB: safeNum(r.totalSessionSizeMB),
+    memoryFiles: safeNum(r.memoryFiles),
+    memorySizeKB: safeNum(r.memorySizeKB),
+    taskCount: safeNum(r.taskCount),
+  };
+};
 
 const formatUptime = (uptime: string): string => {
-  if (!uptime || uptime === '0') return '-';
+  if (!uptime || uptime === '0' || uptime === '-') return '-';
   const match = uptime.match(/(?:(\d+)-)?(?:(\d+):)?(\d+):(\d+)/);
   if (!match) return uptime;
   const days = parseInt(match[1]) || 0;
@@ -33,48 +89,51 @@ const formatTimeAgo = (ts: string | null): string => {
   return `${Math.floor(diff / 86400000)}天前`;
 };
 
-const ProcessCard: React.FC<{ name: string; metrics: GatewayMetrics; icon: React.ReactNode; color: string }> = ({ name, metrics, icon, color }) => (
+const ProcessCard: React.FC<{ name: string; metrics: GatewayMetrics; icon: React.ReactNode; color: string }> = ({ name, metrics, icon, color }) => {
+  const isRunning = metrics.status === 'running';
+  return (
   <div className="bg-gray-800/40 rounded-xl p-4 border border-white/5">
     <div className="flex items-center gap-2 mb-3">
       <div className={`p-1.5 rounded-lg ${color}`}>{icon}</div>
       <span className="text-sm font-semibold text-gray-200">{name}</span>
       <div className="ml-auto flex items-center gap-1.5">
-        <div className={`w-2 h-2 rounded-full ${metrics.status === 'running' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-        <span className={`text-xs ${metrics.status === 'running' ? 'text-emerald-400' : 'text-red-400'}`}>
-          {metrics.status === 'running' ? '运行中' : '已停止'}
+        <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+        <span className={`text-xs ${isRunning ? 'text-emerald-400' : 'text-gray-500'}`}>
+          {isRunning ? '运行中' : '已停止'}
         </span>
       </div>
     </div>
-    {metrics.status === 'running' && (
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <div className="text-xs text-gray-500 mb-0.5">PID</div>
-          <div className="text-sm text-gray-300 font-mono">{metrics.pid}</div>
-        </div>
-        <div>
-          <div className="text-xs text-gray-500 mb-0.5">运行时间</div>
-          <div className="text-sm text-gray-300">{formatUptime(metrics.uptime)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-gray-500 mb-0.5">内存</div>
-          <div className="text-sm text-gray-300">{metrics.memoryMB} MB</div>
-        </div>
-        <div>
-          <div className="text-xs text-gray-500 mb-0.5">CPU</div>
-          <div className="text-sm text-gray-300">{metrics.cpuPercent}%</div>
-        </div>
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <div className="text-xs text-gray-500 mb-0.5">PID</div>
+        <div className="text-sm text-gray-300 font-mono">{isRunning ? safeNum(metrics.pid) || '-' : '-'}</div>
       </div>
-    )}
+      <div>
+        <div className="text-xs text-gray-500 mb-0.5">运行时间</div>
+        <div className="text-sm text-gray-300">{isRunning ? formatUptime(metrics.uptime) : '-'}</div>
+      </div>
+      <div>
+        <div className="text-xs text-gray-500 mb-0.5">内存</div>
+        <div className="text-sm text-gray-300">{isRunning ? `${safeNum(metrics.memoryMB)} MB` : '-'}</div>
+      </div>
+      <div>
+        <div className="text-xs text-gray-500 mb-0.5">CPU</div>
+        <div className="text-sm text-gray-300">{isRunning ? `${safeNum(metrics.cpuPercent)}%` : '-'}</div>
+      </div>
+    </div>
   </div>
-);
+  );
+};
 
 const ResourceBar: React.FC<{ label: string; value: number; max: number; unit: string; color: string }> = ({ label, value, max, unit, color }) => {
-  const percent = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  const safeValue = safeNum(value);
+  const safeMax = safeNum(max, 1);
+  const percent = safeMax > 0 ? Math.min((safeValue / safeMax) * 100, 100) : 0;
   return (
     <div className="mb-2">
       <div className="flex justify-between text-xs mb-1">
         <span className="text-gray-400">{label}</span>
-        <span className="text-gray-300">{value} {unit}</span>
+        <span className="text-gray-300">{safeValue} {unit}</span>
       </div>
       <div className="h-1.5 bg-gray-700/50 rounded-full overflow-hidden">
         <motion.div
@@ -122,24 +181,25 @@ const MonitorPanel: React.FC = () => {
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'sessions'>('overview');
 
-  const { data: resources, isLoading: resLoading, refetch: refetchRes } = useQuery({
+  const { data: rawResources, isLoading: resLoading, isError: resError, refetch: refetchRes } = useQuery({
     queryKey: ['systemResources'],
     queryFn: apiService.getSystemResources,
-    staleTime: 15000,
+    staleTime: 30000,
     refetchInterval: 60000,
   });
+  const resources = normalizeResources(rawResources);
 
   const { data: activities = [], isLoading: actLoading, refetch: refetchAct } = useQuery({
     queryKey: ['agentActivities'],
     queryFn: apiService.getAgentActivities,
-    staleTime: 15000,
+    staleTime: 30000,
     refetchInterval: 60000,
   });
 
   const { data: sessions = [], isLoading: sessLoading, refetch: refetchSess } = useQuery({
     queryKey: ['recentSessions'],
     queryFn: () => apiService.getRecentSessions(30),
-    staleTime: 15000,
+    staleTime: 30000,
     refetchInterval: 60000,
   });
 
@@ -175,6 +235,21 @@ const MonitorPanel: React.FC = () => {
         <button onClick={handleRefreshAll} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
           <RefreshCw className="w-4 h-4 text-gray-400" />
         </button>
+        <button
+          onClick={() => {
+            const exportPayload = {
+              resources,
+              activities,
+              sessions,
+              exportedAt: new Date().toISOString(),
+            };
+            exportData(exportPayload, 'openclaw-monitor', 'json');
+          }}
+          className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+          title="导出监控数据"
+        >
+          <Download className="w-4 h-4 text-gray-400" />
+        </button>
       </div>
 
       <div className="flex gap-1 px-4 py-2 border-b border-white/5">
@@ -202,7 +277,13 @@ const MonitorPanel: React.FC = () => {
                 <div className="flex items-center justify-center py-12">
                   <RefreshCw className="w-6 h-6 text-emerald-400 animate-spin" />
                 </div>
-              ) : resources ? (
+              ) : resError ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                  <WifiOff className="w-8 h-8 mb-3 text-gray-600" />
+                  <p className="text-sm mb-1">无法获取监控数据</p>
+                  <p className="text-xs text-gray-600">请确认 OpenClaw 服务正在运行，或点击右上角刷新重试</p>
+                </div>
+              ) : (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <ProcessCard name="Gateway" metrics={resources.gateway} icon={<Server className="w-4 h-4 text-white" />} color="bg-cyan-500/20" />
@@ -217,13 +298,13 @@ const MonitorPanel: React.FC = () => {
                     <ResourceBar label="会话数据" value={Math.round(resources.totalSessionSizeMB)} max={500} unit="MB" color="bg-amber-500" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <StatBox icon={<MessageSquare className="w-4 h-4" />} label="总会话数" value={resources.totalSessions} color="text-emerald-400" />
-                    <StatBox icon={<Database className="w-4 h-4" />} label="记忆文件" value={resources.memoryFiles} color="text-blue-400" />
-                    <StatBox icon={<Brain className="w-4 h-4" />} label="记忆大小" value={`${resources.memorySizeKB}KB`} color="text-purple-400" />
-                    <StatBox icon={<Clock className="w-4 h-4" />} label="任务数" value={resources.taskCount} color="text-amber-400" />
+                    <StatBox icon={<MessageSquare className="w-4 h-4" />} label="总会话数" value={safeNum(resources.totalSessions)} color="text-emerald-400" />
+                    <StatBox icon={<Database className="w-4 h-4" />} label="记忆文件" value={safeNum(resources.memoryFiles)} color="text-blue-400" />
+                    <StatBox icon={<Brain className="w-4 h-4" />} label="记忆大小" value={`${safeNum(resources.memorySizeKB)}KB`} color="text-purple-400" />
+                    <StatBox icon={<Clock className="w-4 h-4" />} label="任务数" value={safeNum(resources.taskCount)} color="text-amber-400" />
                   </div>
                 </div>
-              ) : null}
+              )}
             </motion.div>
           )}
 
@@ -234,11 +315,11 @@ const MonitorPanel: React.FC = () => {
                   <RefreshCw className="w-6 h-6 text-emerald-400 animate-spin" />
                 </div>
               ) : activities.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-sm">暂无 Agent 数据</div>
+                <div className="text-center py-8 text-gray-500 text-sm">暂无 Agent 数据，启动 OpenClaw 服务后数据会自动同步</div>
               ) : (
                 <div className="space-y-2">
                   {activities
-                    .sort((a, b) => (b.activeSessionCount || b.sessionCount) - (a.activeSessionCount || a.sessionCount))
+                    .sort((a, b) => (safeNum(b.activeSessionCount) || safeNum(b.sessionCount)) - (safeNum(a.activeSessionCount) || safeNum(a.sessionCount)))
                     .map(agent => (
                       <div key={agent.agentId} className="bg-gray-800/30 rounded-xl border border-white/5 overflow-hidden">
                         <button
@@ -248,16 +329,16 @@ const MonitorPanel: React.FC = () => {
                           <span className="text-lg">{agent.emoji || '🤖'}</span>
                           <div className="flex-1 text-left">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-200">{agent.agentName}</span>
-                              {agent.activeSessionCount > 0 && (
+                              <span className="text-sm font-medium text-gray-200">{agent.agentName || agent.agentId}</span>
+                              {safeNum(agent.activeSessionCount) > 0 && (
                                 <span className="px-1.5 py-0.5 bg-emerald-500/15 text-emerald-400 text-[10px] rounded font-medium">活跃</span>
                               )}
                             </div>
                             <div className="text-xs text-gray-500 mt-0.5">
                               {agent.currentModel && <span className="mr-2">🧠 {agent.currentModel}</span>}
-                              <span>{agent.sessionCount} 会话</span>
+                              <span>{safeNum(agent.sessionCount)} 会话</span>
                               <span className="mx-1">·</span>
-                              <span>{agent.totalSessionSizeKB.toFixed(0)}KB</span>
+                              <span>{safeNum(agent.totalSessionSizeKB).toFixed(0)}KB</span>
                             </div>
                           </div>
                           <div className="text-xs text-gray-500">{formatTimeAgo(agent.lastActiveAt)}</div>
@@ -269,10 +350,10 @@ const MonitorPanel: React.FC = () => {
                               <div className="px-4 pb-3 grid grid-cols-2 gap-2 text-xs">
                                 <InfoRow label="Agent ID" value={agent.agentId} />
                                 <InfoRow label="状态" value={agent.currentStatus || '-'} />
-                                <InfoRow label="活跃会话" value={`${agent.activeSessionCount}`} />
-                                <InfoRow label="总会话数" value={`${agent.sessionCount}`} />
+                                <InfoRow label="活跃会话" value={`${safeNum(agent.activeSessionCount)}`} />
+                                <InfoRow label="总会话数" value={`${safeNum(agent.sessionCount)}`} />
                                 <InfoRow label="当前模型" value={agent.currentModel || '-'} />
-                                <InfoRow label="数据大小" value={`${agent.totalSessionSizeKB.toFixed(1)} KB`} />
+                                <InfoRow label="数据大小" value={`${safeNum(agent.totalSessionSizeKB).toFixed(1)} KB`} />
                                 <InfoRow label="最后活跃" value={formatTimeAgo(agent.lastActiveAt)} />
                               </div>
                             </motion.div>
@@ -311,11 +392,11 @@ const MonitorPanel: React.FC = () => {
                       <tbody>
                         {sessions.map(s => (
                           <tr key={s.sessionId} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                            <td className="py-2 px-2 text-gray-300">{s.agentId}</td>
+                            <td className="py-2 px-2 text-gray-300">{s.agentId || '-'}</td>
                             <td className="py-2 px-2 text-gray-400 font-mono text-[11px]">{s.model || '-'}</td>
-                            <td className="py-2 px-2"><StatusBadge status={s.status} /></td>
+                            <td className="py-2 px-2"><StatusBadge status={s.status || 'done'} /></td>
                             <td className="py-2 px-2 text-gray-400">{s.channel || '-'}</td>
-                            <td className="py-2 px-2 text-gray-400">{s.sizeKB.toFixed(1)}KB</td>
+                            <td className="py-2 px-2 text-gray-400">{safeNum(s.sizeKB).toFixed(1)}KB</td>
                             <td className="py-2 px-2 text-gray-500">{formatTimeAgo(s.updatedAt)}</td>
                           </tr>
                         ))}

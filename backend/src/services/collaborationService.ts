@@ -1,6 +1,7 @@
 import { WslService } from './wslService.js';
 import { appConfig } from '../config.js';
 import { DataCache } from './dataCache.js';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 
 export interface AgentBinding {
   agent: string;
@@ -81,8 +82,8 @@ class CollaborationService {
         15000
       );
       return { success: true, message: output.trim() };
-    } catch (error: any) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) };
     }
   }
 
@@ -93,8 +94,8 @@ class CollaborationService {
         15000
       );
       return { success: true, message: output.trim() };
-    } catch (error: any) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) };
     }
   }
 
@@ -116,8 +117,8 @@ class CollaborationService {
       } catch {
         return { success: true, message: output.trim() };
       }
-    } catch (error: any) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) };
     }
   }
 
@@ -137,8 +138,8 @@ class CollaborationService {
       } catch {
         return { success: true, message: output.trim() };
       }
-    } catch (error: any) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) };
     }
   }
 
@@ -219,15 +220,33 @@ class CollaborationService {
   async getAgentList(): Promise<string[]> {
     return DataCache.getOrFetch('collab-agents', async () => {
       try {
-      const output = await WslService.execCommand('openclaw agents list --json 2>/dev/null', 10000);
-      try {
-        const data = JSON.parse(output.trim());
-        if (Array.isArray(data)) return data.map((a: any) => a.id || a.name || a);
+        const output = await WslService.execCommand('openclaw agents list --json 2>/dev/null', 10000);
+        try {
+          const data = JSON.parse(output.trim());
+          if (Array.isArray(data) && data.length > 0) {
+            return data.map((a: any) => a.id || a.name || a);
+          }
+        } catch { }
+        const textLines = output.trim().split('\n').filter(l => l.trim() && !l.includes('🦞'));
+        if (textLines.length > 0) return textLines;
       } catch { }
-      return output.trim().split('\n').filter(l => l.trim() && !l.includes('🦞'));
-    } catch {
+
+      try {
+        const configJson = await WslService.readFile(appConfig.configJson);
+        const config = JSON.parse(configJson);
+        const agentList = config?.agents?.list;
+        if (Array.isArray(agentList) && agentList.length > 0) {
+          return agentList.map((a: any) => a.id || a.name || a);
+        }
+      } catch { }
+
+      try {
+        const dirs = await WslService.listDirectory(appConfig.agentsDir);
+        const agentDirs = dirs.filter(d => !d.startsWith('.'));
+        if (agentDirs.length > 0) return agentDirs;
+      } catch { }
+
       return [];
-    }
     }, 120000);
   }
 }

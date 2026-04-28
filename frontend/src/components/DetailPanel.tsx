@@ -74,8 +74,9 @@ const AgentList: React.FC = () => {
         setSwitchMessage('');
       }, 3000);
     },
-    onError: (error: any) => {
-      setSwitchMessage(`切换失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const msg = error instanceof Error ? error.message : '未知错误';
+      setSwitchMessage(`切换失败: ${msg}`);
       queryClient.invalidateQueries({ queryKey: ['logs'] });
       setTimeout(() => {
         setSwitchingId(null);

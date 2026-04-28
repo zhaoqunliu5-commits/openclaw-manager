@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { OpenclawService } from '../services/openclawService.js';
 import { DbService } from '../services/dbService.js';
@@ -109,8 +110,8 @@ print(json.dumps(result))
     }, 120000);
 
     res.json(statsData);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get agent stats', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get agent stats', message: getErrorMessage(error) });
   }
 });
 
@@ -118,9 +119,9 @@ router.get('/', async (req, res) => {
   try {
     const agents = await OpenclawService.getAgents();
     res.json(agents);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to get agents:', error);
-    res.status(500).json({ error: 'Failed to get agents', message: error.message });
+    res.status(500).json({ error: 'Failed to get agents', message: getErrorMessage(error) });
   }
 });
 
@@ -128,9 +129,9 @@ router.get('/active', async (req, res) => {
   try {
     const activeAgent = await OpenclawService.getActiveAgent();
     res.json({ activeAgent });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to get active agent:', error);
-    res.status(500).json({ error: 'Failed to get active agent', message: error.message });
+    res.status(500).json({ error: 'Failed to get active agent', message: getErrorMessage(error) });
   }
 });
 
@@ -155,18 +156,18 @@ router.post('/switch', async (req, res) => {
     DataCache.invalidate('agents');
 
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to switch agent:', error);
 
     db.logOperation({
       operationType: 'switch',
       serviceName: 'openclaw-gateway',
       status: 'failure',
-      message: error.message,
+      message: getErrorMessage(error),
       metadata: JSON.stringify({ agentId: req.body.agentId })
     });
 
-    res.status(500).json({ error: 'Failed to switch agent', message: error.message });
+    res.status(500).json({ error: 'Failed to switch agent', message: getErrorMessage(error) });
   }
 });
 
@@ -182,9 +183,9 @@ router.get('/wait-gateway', async (req, res) => {
     });
 
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to wait for gateway:', error);
-    res.status(500).json({ error: 'Failed to wait for gateway', message: error.message });
+    res.status(500).json({ error: 'Failed to wait for gateway', message: getErrorMessage(error) });
   }
 });
 

@@ -1,6 +1,7 @@
 import { WslService } from './wslService.js';
 import { appConfig } from '../config.js';
 import { DataCache } from './dataCache.js';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 
 const OPENCLAW_PATH = appConfig.openclawPath;
 const WORKSPACES_PATH = appConfig.workspacesPath;
@@ -68,7 +69,55 @@ export interface SessionInfo {
   active: boolean;
 }
 
+export interface MemoryDiagnostic {
+  wslAvailable: boolean;
+  openclawPathExists: boolean;
+  agentsDirExists: boolean;
+  agents: string[];
+  error?: string;
+}
+
 export class MemoryService {
+  static async getDiagnostic(): Promise<MemoryDiagnostic> {
+    const diag: MemoryDiagnostic = {
+      wslAvailable: false,
+      openclawPathExists: false,
+      agentsDirExists: false,
+      agents: [],
+    };
+    try {
+      await WslService.execCommand('echo ok', 5000);
+      diag.wslAvailable = true;
+    } catch {
+      diag.error = 'WSL 不可用，请确保 WSL 已安装并运行';
+      return diag;
+    }
+    try {
+      const checkPath = await WslService.execCommand(`test -d "${OPENCLAW_PATH}" && echo exists || echo missing`, 5000);
+      diag.openclawPathExists = checkPath.trim() === 'exists';
+    } catch { }
+    if (!diag.openclawPathExists) {
+      diag.error = `OpenClaw 路径不存在: ${OPENCLAW_PATH}`;
+      return diag;
+    }
+    try {
+      const checkAgents = await WslService.execCommand(`test -d "${OPENCLAW_PATH}/agents" && echo exists || echo missing`, 5000);
+      diag.agentsDirExists = checkAgents.trim() === 'exists';
+    } catch { }
+    if (!diag.agentsDirExists) {
+      diag.error = `agents 目录不存在: ${OPENCLAW_PATH}/agents`;
+      return diag;
+    }
+    try {
+      const dirs = await WslService.listDirectory(`${OPENCLAW_PATH}/agents`);
+      diag.agents = dirs.filter(d => !d.startsWith('.'));
+    } catch { }
+    if (diag.agents.length === 0) {
+      diag.error = '未检测到任何 Agent 目录，请确认 OpenClaw 已正确初始化';
+    }
+    return diag;
+  }
+
   static async getMemoryStatus(): Promise<MemoryStatus[]> {
     return DataCache.getOrFetch('memory-status', async () => {
       try {
@@ -306,7 +355,7 @@ except:
   }
 
   static async searchMemory(query: string, agent?: string): Promise<SearchResult[]> {
-    const safeQuery = query.replace(/"/g, '');
+    const safeQuery = query.replace(/"/g, '').replace(/[`;$|]/g, '');
     const agentFlag = agent ? ` --agent ${agent.replace(/[^a-zA-Z0-9_\-]/g, '')}` : '';
     try {
       const output = await WslService.execCommand(
@@ -327,7 +376,36 @@ except:
           });
         }
       }
-      return results;
+      if (results.length > 0) return results;
+    } catch { }
+
+    try {
+      const searchDirs = agent
+        ? [`${OPENCLAW_PATH}/agents/${agent.replace(/[^a-zA-Z0-9_\-]/g, '')}/memory`]
+        : [`${OPENCLAW_PATH}/agents`];
+      const grepResults: SearchResult[] = [];
+      for (const dir of searchDirs) {
+        const output = await WslService.execCommand(
+          `grep -rl --include="*.md" --include="*.json" --include="*.txt" -m 20 "${safeQuery}" "${dir}" 2>/dev/null | head -20`,
+          15000
+        );
+        const files = output.trim().split('\n').filter(f => f.trim());
+        for (const file of files) {
+          try {
+            const snippet = await WslService.execCommand(
+              `grep -m 3 -A 2 "${safeQuery}" "${file}" 2>/dev/null | head -10`,
+              5000
+            );
+            grepResults.push({
+              score: 0.5,
+              file,
+              lines: '',
+              snippet: snippet.trim().substring(0, 300),
+            });
+          } catch { }
+        }
+      }
+      return grepResults;
     } catch {
       return [];
     }
@@ -468,8 +546,8 @@ print(json.dumps({"success": True, "deleted": deleted, "message": "Cleaned " + s
         60000
       );
       return { success: true, message: output.substring(0, 300) };
-    } catch (error: any) {
-      return { success: false, message: error?.message || 'Reindex failed' };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) || 'Reindex failed' };
     }
   }
 }

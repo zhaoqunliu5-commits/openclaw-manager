@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { ConfigManageService } from '../services/configManageService.js';
 import { WslService } from '../services/wslService.js';
@@ -30,8 +31,8 @@ router.post('/hot-reload', async (_req, res) => {
     }
 
     res.json({ success: true, results, timestamp: new Date().toISOString() });
-  } catch (error: any) {
-    res.status(500).json({ error: 'Hot reload failed', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Hot reload failed', message: getErrorMessage(error) });
   }
 });
 
@@ -57,8 +58,8 @@ router.post('/hot-reload/service/:name', async (req, res) => {
     } else {
       res.json({ success: true, message: `${serviceName} 配置已热重载` });
     }
-  } catch (error: any) {
-    res.status(500).json({ error: 'Hot reload failed', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Hot reload failed', message: getErrorMessage(error) });
   }
 });
 
@@ -66,8 +67,8 @@ router.get('/sections', async (_req, res) => {
   try {
     const sections = await ConfigManageService.getSections();
     res.json(sections);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get sections', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get sections', message: getErrorMessage(error) });
   }
 });
 
@@ -76,8 +77,8 @@ router.get('/json', async (req, res) => {
     const section = req.query.section as string | undefined;
     const config = await ConfigManageService.getConfigJson(section);
     res.json(config);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get config', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get config', message: getErrorMessage(error) });
   }
 });
 
@@ -85,8 +86,8 @@ router.put('/section/:section', async (req, res) => {
   try {
     const result = await ConfigManageService.updateSection(req.params.section, req.body);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to update section', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to update section', message: getErrorMessage(error) });
   }
 });
 
@@ -94,8 +95,8 @@ router.get('/backups', async (_req, res) => {
   try {
     const backups = await ConfigManageService.listBackups();
     res.json(backups);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to list backups', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to list backups', message: getErrorMessage(error) });
   }
 });
 
@@ -104,8 +105,8 @@ router.post('/backups', async (req, res) => {
     const label = (req.body?.label as string) || '';
     const backup = await ConfigManageService.createBackup(label);
     res.json(backup);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to create backup', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to create backup', message: getErrorMessage(error) });
   }
 });
 
@@ -113,8 +114,8 @@ router.post('/backups/:id/restore', async (req, res) => {
   try {
     const result = await ConfigManageService.restoreBackup(req.params.id);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to restore backup', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to restore backup', message: getErrorMessage(error) });
   }
 });
 
@@ -122,8 +123,8 @@ router.delete('/backups/:id', async (req, res) => {
   try {
     const result = await ConfigManageService.deleteBackup(req.params.id);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to delete backup', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to delete backup', message: getErrorMessage(error) });
   }
 });
 
@@ -136,8 +137,8 @@ router.post('/diff', async (req, res) => {
     }
     const diffs = await ConfigManageService.diffBackups(backupId1, backupId2);
     res.json(diffs);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to diff backups', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to diff backups', message: getErrorMessage(error) });
   }
 });
 
@@ -146,8 +147,8 @@ router.get('/export', async (_req, res) => {
     const data = await ConfigManageService.exportConfig();
     res.setHeader('Content-Disposition', 'attachment; filename=openclaw-config.json');
     res.json(data);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to export config', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to export config', message: getErrorMessage(error) });
   }
 });
 
@@ -160,8 +161,8 @@ router.post('/import', async (req, res) => {
     }
     const result = await ConfigManageService.importConfig(config, merge === true);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to import config', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to import config', message: getErrorMessage(error) });
   }
 });
 

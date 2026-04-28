@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { workspaceService } from '../services/workspaceService.js';
 
@@ -12,8 +13,8 @@ router.get('/scan', async (_req, res) => {
   try {
     const workspaces = await workspaceService.scanWorkspaces();
     res.json(workspaces);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -21,8 +22,8 @@ router.post('/access/:workspace', async (req, res) => {
   try {
     await workspaceService.recordAccess(req.params.workspace);
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -36,8 +37,8 @@ router.post('/backups', async (req, res) => {
     if (!workspace) { res.status(400).json({ error: 'workspace is required' }); return; }
     const backup = await workspaceService.createBackup(workspace);
     res.json(backup);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -45,8 +46,8 @@ router.post('/backups/:id/restore', async (req, res) => {
   try {
     const result = await workspaceService.restoreBackup(Number(req.params.id));
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -60,8 +61,8 @@ router.post('/switch', async (req, res) => {
     if (!workspace) { res.status(400).json({ error: 'workspace is required' }); return; }
     const result = await workspaceService.switchWorkspace(workspace);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 

@@ -4,11 +4,20 @@ export function useHotkeys(
   activePanel: string | null,
   setActivePanel: React.Dispatch<React.SetStateAction<string | null>>,
   setCommandPaletteOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  setHelpDocOpen?: React.Dispatch<React.SetStateAction<boolean>>,
 ) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault();
       setCommandPaletteOpen(true);
+      return;
+    }
+
+    if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      e.preventDefault();
+      setHelpDocOpen?.(prev => !prev);
       return;
     }
 
@@ -37,7 +46,7 @@ export function useHotkeys(
         setActivePanel(prev => prev === panel ? null : panel);
       }
     }
-  }, [activePanel, setActivePanel, setCommandPaletteOpen]);
+  }, [activePanel, setActivePanel, setCommandPaletteOpen, setHelpDocOpen]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -57,4 +66,5 @@ export const HOTKEY_LIST: { keys: string; description: string }[] = [
   { keys: 'Ctrl+8', description: '设置中心' },
   { keys: 'Ctrl+R', description: '刷新页面' },
   { keys: 'Esc', description: '关闭当前面板' },
+  { keys: '?', description: '打开帮助文档' },
 ];

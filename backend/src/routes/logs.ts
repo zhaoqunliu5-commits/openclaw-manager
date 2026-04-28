@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { DbService } from '../services/dbService.js';
 import { WslService } from '../services/wslService.js';
@@ -10,9 +11,9 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 100;
     const operations = db.getOperations(limit);
     res.json(operations);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to get logs:', error);
-    res.status(500).json({ error: 'Failed to get logs', message: error.message });
+    res.status(500).json({ error: 'Failed to get logs', message: getErrorMessage(error) });
   }
 });
 
@@ -60,8 +61,8 @@ router.get('/wsl-tail', async (req, res) => {
       10000
     );
     res.json({ lines: output.split('\n').filter(Boolean) });
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to read WSL logs', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to read WSL logs', message: getErrorMessage(error) });
   }
 });
 

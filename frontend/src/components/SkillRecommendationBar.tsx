@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Star, ExternalLink, ChevronRight, Sparkles, Terminal, Copy, Check, Github } from 'lucide-react';
+import { Star, ExternalLink, ChevronRight, Sparkles, Terminal, Copy, Check, Github, Search } from 'lucide-react';
 import { apiService } from '../api';
 import type { GitHubSkillRecommendation } from '../types';
 
@@ -93,26 +93,42 @@ const SkillCard = ({ skill, index }: { skill: GitHubSkillRecommendation; index: 
   );
 };
 
-const SkillRecommendationBar: React.FC = () => {
+const SkillRecommendationBar: React.FC = React.memo(() => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showTrending, setShowTrending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeView, setActiveView] = useState<'recommend' | 'trending' | 'search'>('recommend');
 
   const { data: recommendations, isLoading: recLoading } = useQuery({
     queryKey: ['skill-recommendations'],
     queryFn: () => apiService.getSkillRecommendations(6),
     staleTime: 60000,
-    enabled: isExpanded && !showTrending,
+    enabled: isExpanded && activeView === 'recommend',
   });
 
   const { data: trending, isLoading: trendLoading } = useQuery({
     queryKey: ['trending-skills'],
     queryFn: () => apiService.getTrendingSkills(),
     staleTime: 60000,
-    enabled: showTrending,
+    enabled: activeView === 'trending',
   });
 
-  const displayData = showTrending ? trending : recommendations;
-  const loading = showTrending ? trendLoading : recLoading;
+  const { data: searchResults, isLoading: searchLoading } = useQuery({
+    queryKey: ['skill-rec-search', searchQuery],
+    queryFn: () => apiService.searchSkillRecommendations(searchQuery),
+    enabled: !!searchQuery && activeView === 'search',
+    staleTime: 30000,
+  });
+
+  const displayData = activeView === 'search'
+    ? searchResults
+    : activeView === 'trending'
+      ? trending
+      : recommendations;
+  const loading = activeView === 'search'
+    ? searchLoading
+    : activeView === 'trending'
+      ? trendLoading
+      : recLoading;
 
   return (
     <motion.div
@@ -173,9 +189,9 @@ const SkillRecommendationBar: React.FC = () => {
               <div className="px-6 pb-5">
                 <div className="flex items-center gap-2 mb-4">
                   <button
-                    onClick={() => setShowTrending(false)}
+                    onClick={() => setActiveView('recommend')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      !showTrending
+                      activeView === 'recommend'
                         ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                         : 'bg-white/5 text-gray-400 border border-transparent hover:bg-white/10'
                     }`}
@@ -183,16 +199,41 @@ const SkillRecommendationBar: React.FC = () => {
                     为你推荐
                   </button>
                   <button
-                    onClick={() => setShowTrending(true)}
+                    onClick={() => setActiveView('trending')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      showTrending
+                      activeView === 'trending'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                         : 'bg-white/5 text-gray-400 border border-transparent hover:bg-white/10'
                     }`}
                   >
                     热门趋势
                   </button>
+                  <button
+                    onClick={() => setActiveView('search')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      activeView === 'search'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                        : 'bg-white/5 text-gray-400 border border-transparent hover:bg-white/10'
+                    }`}
+                  >
+                    🔍 搜索
+                  </button>
                 </div>
+
+                {activeView === 'search' && (
+                  <div className="mb-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="搜索技能（支持中英文，如 代码审查、search、writing）..."
+                        className="w-full bg-gray-800/50 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-cyan-500/30"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {loading ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -209,13 +250,17 @@ const SkillRecommendationBar: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     <AnimatePresence>
                       {(displayData ?? []).map((skill, index) => (
-                        <SkillCard key={skill.slug} skill={skill} index={index} />
+                        <SkillCard key={skill.slug + index} skill={skill} index={index} />
                       ))}
                     </AnimatePresence>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500 text-sm">
-                    暂无推荐，请确保 OpenClaw 服务正常运行
+                    {activeView === 'search' && !searchQuery
+                      ? '输入关键词搜索 GitHub 上的 OpenClaw 技能'
+                      : activeView === 'search' && searchQuery
+                        ? `未找到与「${searchQuery}」相关的技能，尝试英文关键词如 "code review"`
+                        : '暂无推荐，请确保 OpenClaw 服务正常运行'}
                   </div>
                 )}
               </div>
@@ -225,6 +270,6 @@ const SkillRecommendationBar: React.FC = () => {
       </div>
     </motion.div>
   );
-};
+});
 
 export default SkillRecommendationBar;

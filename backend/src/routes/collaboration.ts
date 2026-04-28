@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router, type Request, type Response } from 'express';
 import { collaborationService } from '../services/collaborationService.js';
 
@@ -7,8 +8,8 @@ router.get('/bindings', async (_req: Request, res: Response) => {
   try {
     const bindings = await collaborationService.getBindings();
     res.json(bindings);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get bindings', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get bindings', message: getErrorMessage(error) });
   }
 });
 
@@ -21,8 +22,8 @@ router.post('/bindings', async (req: Request, res: Response) => {
     }
     const result = await collaborationService.addBinding(agent, binding);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to add binding', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to add binding', message: getErrorMessage(error) });
   }
 });
 
@@ -35,8 +36,8 @@ router.delete('/bindings', async (req: Request, res: Response) => {
     }
     const result = await collaborationService.removeBinding(agent, binding);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to remove binding', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to remove binding', message: getErrorMessage(error) });
   }
 });
 
@@ -44,8 +45,8 @@ router.get('/agents', async (_req: Request, res: Response) => {
   try {
     const agents = await collaborationService.getAgentList();
     res.json(agents);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get agent list', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get agent list', message: getErrorMessage(error) });
   }
 });
 
@@ -60,8 +61,8 @@ router.post('/send', async (req: Request, res: Response) => {
       fromAgent || 'main', toAgent, message, { channel, deliver, sessionId }
     );
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to send message', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to send message', message: getErrorMessage(error) });
   }
 });
 
@@ -74,8 +75,8 @@ router.post('/broadcast', async (req: Request, res: Response) => {
     }
     const result = await collaborationService.broadcastMessage(message, targets, channel);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to broadcast', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to broadcast', message: getErrorMessage(error) });
   }
 });
 
@@ -84,8 +85,8 @@ router.get('/messages/:agent', async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const messages = await collaborationService.getRecentMessages(req.params.agent, limit);
     res.json(messages);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to get messages', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to get messages', message: getErrorMessage(error) });
   }
 });
 
@@ -98,8 +99,8 @@ router.post('/workflow', async (req: Request, res: Response) => {
     }
     const result = await collaborationService.executeWorkflow({ name, steps });
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to execute workflow', message: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: 'Failed to execute workflow', message: getErrorMessage(error) });
   }
 });
 

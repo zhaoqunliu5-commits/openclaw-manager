@@ -2,23 +2,24 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../api';
+import type { WorkspaceStat, WorkspaceBackup, ScannedWorkspace } from '../types';
 import { Folder, Database, Play, RotateCcw, BarChart3, Plus } from 'lucide-react';
 
 export default function WorkspaceManagePanel() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'stats' | 'backups' | 'scan'>('stats');
 
-  const { data: stats = [] } = useQuery({
+  const { data: stats = [] } = useQuery<WorkspaceStat[]>({
     queryKey: ['workspace-stats'],
     queryFn: apiService.getWorkspaceStats,
   });
 
-  const { data: backups = [] } = useQuery({
+  const { data: backups = [] } = useQuery<WorkspaceBackup[]>({
     queryKey: ['workspace-backups'],
     queryFn: apiService.getWorkspaceBackups,
   });
 
-  const { data: scanned = [], isLoading: scanLoading, refetch: doScan } = useQuery({
+  const { data: scanned = [], isLoading: scanLoading, refetch: doScan } = useQuery<ScannedWorkspace[]>({
     queryKey: ['workspaces-scan'],
     queryFn: apiService.scanWorkspaces,
     enabled: false,
@@ -94,20 +95,20 @@ export default function WorkspaceManagePanel() {
                 <div className="text-xs text-gray-400">已记录工作区</div>
               </div>
               <div className="glass-card rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-cyan-400">{stats.reduce((s: number, w: any) => s + w.accessCount, 0)}</div>
+                <div className="text-2xl font-bold text-cyan-400">{stats.reduce((s: number, w: WorkspaceStat) => s + w.accessCount, 0)}</div>
                 <div className="text-xs text-gray-400">总访问次数</div>
               </div>
               <div className="glass-card rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-purple-400">{stats.reduce((s: number, w: any) => s + w.totalSessions, 0)}</div>
+                <div className="text-2xl font-bold text-purple-400">{stats.reduce((s: number, w: WorkspaceStat) => s + w.totalSessions, 0)}</div>
                 <div className="text-xs text-gray-400">总会话数</div>
               </div>
             </div>
 
             {stats.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 text-sm">暂无使用记录</div>
+              <div className="text-center py-8 text-gray-500 text-sm">暂无使用记录，访问工作区后会自动统计</div>
             ) : (
               <div className="space-y-3">
-                {stats.map((ws: any) => (
+                {stats.map((ws: WorkspaceStat) => (
                   <motion.div
                     key={ws.workspace}
                     initial={{ opacity: 0, x: -20 }}
@@ -150,7 +151,7 @@ export default function WorkspaceManagePanel() {
                     <div className="mt-2 h-2 bg-gray-900/50 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
-                        style={{ width: `${Math.min(100, (ws.accessCount / Math.max(...stats.map((s: any) => s.accessCount), 1)) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (ws.accessCount / Math.max(...stats.map((s: WorkspaceStat) => s.accessCount), 1)) * 100)}%` }}
                       />
                     </div>
                   </motion.div>
@@ -163,10 +164,10 @@ export default function WorkspaceManagePanel() {
         {activeTab === 'backups' && (
           <div className="space-y-4">
             {backups.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 text-sm">暂无备份</div>
+              <div className="text-center py-8 text-gray-500 text-sm">暂无备份，创建备份后可以随时还原配置</div>
             ) : (
               <div className="space-y-3">
-                {backups.map((backup: any) => (
+                {backups.map((backup: WorkspaceBackup) => (
                   <div key={backup.id} className="bg-gray-800/50 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Database className="w-5 h-5 text-purple-400" />
@@ -212,7 +213,7 @@ export default function WorkspaceManagePanel() {
               <div className="text-center py-8 text-gray-500 text-sm">点击上方按钮扫描工作区</div>
             ) : (
               <div className="space-y-3">
-                {scanned.map((ws: any) => (
+                {scanned.map((ws: ScannedWorkspace) => (
                   <div key={ws.name} className="bg-gray-800/50 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Folder className="w-5 h-5 text-emerald-400" />

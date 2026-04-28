@@ -2,6 +2,7 @@ import { WslService } from './wslService.js';
 import { dbService } from './dbService.js';
 import { appConfig } from '../config.js';
 import { DataCache } from './dataCache.js';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import type { CommandEntry, CommandHistoryEntry, CommandResult } from '../types/index.js';
 
 const HISTORY_FILE = appConfig.commandHistoryFile;
@@ -112,10 +113,10 @@ print(json.dumps(commands, ensure_ascii=False))
       const duration = Date.now() - start;
       this.persistHistory(command, output, 'success', duration);
       return { success: true, output, exitCode: 0, duration };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration = Date.now() - start;
-      const errMsg = error?.message || String(error);
-      const exitCode = error?.code || 1;
+      const errMsg = getErrorMessage(error);
+      const exitCode = (error as { code?: number })?.code || 1;
       this.persistHistory(command, errMsg, 'error', duration);
       return { success: false, output: errMsg, exitCode, duration };
     }

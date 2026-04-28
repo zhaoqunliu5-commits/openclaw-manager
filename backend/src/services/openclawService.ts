@@ -1,6 +1,7 @@
 import { WslService } from './wslService.js';
 import { appConfig } from '../config.js';
 import { DataCache } from './dataCache.js';
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { ServiceStatus, OverviewData, ConfigData, LogEntry, OpenClawConfig, AgentInfo, SkillInfo, WorkspaceInfo } from '../types/index.js';
 
 const OPENCLAW_PATH = appConfig.openclawPath;
@@ -58,10 +59,10 @@ export class OpenclawService {
       if (status.isRunning) {
         return { success: true, message: `${serviceName} started successfully` };
       } else {
-        return { success: false, message: `${serviceName} failed to start �?process not detected after 3s` };
+        return { success: false, message: `${serviceName} failed to start - process not detected after 3s` };
       }
-    } catch (error: any) {
-      return { success: false, message: `Failed to start ${serviceName}: ${error.message}` };
+    } catch (error: unknown) {
+      return { success: false, message: `Failed to start ${serviceName}: ${getErrorMessage(error)}` };
     }
   }
 
@@ -91,10 +92,10 @@ export class OpenclawService {
       if (!status.isRunning) {
         return { success: true, message: `${serviceName} stopped successfully` };
       } else {
-        return { success: false, message: `${serviceName} failed to stop �?process still running` };
+        return { success: false, message: `${serviceName} failed to stop - process still running` };
       }
-    } catch (error: any) {
-      return { success: false, message: `Failed to stop ${serviceName}: ${error.message}` };
+    } catch (error: unknown) {
+      return { success: false, message: `Failed to stop ${serviceName}: ${getErrorMessage(error)}` };
     }
   }
 
@@ -350,8 +351,8 @@ export class OpenclawService {
       }
 
       return { success: true, message: output.trim() || `Switched to agent: ${agentId}` };
-    } catch (error: any) {
-      return { success: false, message: `Failed to switch agent: ${error.message}` };
+    } catch (error: unknown) {
+      return { success: false, message: `Failed to switch agent: ${getErrorMessage(error)}` };
     }
   }
 

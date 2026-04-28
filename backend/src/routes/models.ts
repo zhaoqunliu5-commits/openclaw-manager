@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../middleware/errorHandler.js';
 import { Router } from 'express';
 import { ModelService } from '../services/modelService.js';
 
@@ -7,9 +8,9 @@ router.get('/providers', async (_req, res) => {
   try {
     const providers = await ModelService.getProviders();
     res.json(providers);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to get model providers:', error);
-    res.status(500).json({ error: 'Failed to get model providers', message: error.message });
+    res.status(500).json({ error: 'Failed to get model providers', message: getErrorMessage(error) });
   }
 });
 
@@ -17,9 +18,9 @@ router.get('/aliases', async (_req, res) => {
   try {
     const aliases = await ModelService.getAliases();
     res.json(aliases);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to get model aliases:', error);
-    res.status(500).json({ error: 'Failed to get model aliases', message: error.message });
+    res.status(500).json({ error: 'Failed to get model aliases', message: getErrorMessage(error) });
   }
 });
 
@@ -27,9 +28,9 @@ router.get('/agent-models', async (_req, res) => {
   try {
     const agentModels = await ModelService.getAgentModels();
     res.json(agentModels);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to get agent models:', error);
-    res.status(500).json({ error: 'Failed to get agent models', message: error.message });
+    res.status(500).json({ error: 'Failed to get agent models', message: getErrorMessage(error) });
   }
 });
 
@@ -42,9 +43,9 @@ router.post('/detect', async (req, res) => {
     }
     const result = await ModelService.detectProvider(baseUrl, apiKey);
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to detect provider:', error);
-    res.status(500).json({ error: 'Failed to detect provider', message: error.message });
+    res.status(500).json({ error: 'Failed to detect provider', message: getErrorMessage(error) });
   }
 });
 
@@ -57,9 +58,9 @@ router.post('/providers', async (req, res) => {
     }
     const provider = await ModelService.addProvider(name || 'custom', baseUrl, apiKey);
     res.json(provider);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to add provider:', error);
-    res.status(500).json({ error: 'Failed to add provider', message: error.message });
+    res.status(500).json({ error: 'Failed to add provider', message: getErrorMessage(error) });
   }
 });
 
@@ -67,9 +68,9 @@ router.delete('/providers/:name', async (req, res) => {
   try {
     const result = await ModelService.removeProvider(req.params.name);
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to remove provider:', error);
-    res.status(500).json({ error: 'Failed to remove provider', message: error.message });
+    res.status(500).json({ error: 'Failed to remove provider', message: getErrorMessage(error) });
   }
 });
 
@@ -77,9 +78,9 @@ router.post('/providers/:name/refresh', async (req, res) => {
   try {
     const result = await ModelService.refreshProviderModels(req.params.name);
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to refresh provider models:', error);
-    res.status(500).json({ error: 'Failed to refresh provider models', message: error.message });
+    res.status(500).json({ error: 'Failed to refresh provider models', message: getErrorMessage(error) });
   }
 });
 
@@ -92,9 +93,9 @@ router.post('/set-agent-model', async (req, res) => {
     }
     const result = await ModelService.setAgentModel(agentId, modelId);
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to set agent model:', error);
-    res.status(500).json({ error: 'Failed to set agent model', message: error.message });
+    res.status(500).json({ error: 'Failed to set agent model', message: getErrorMessage(error) });
   }
 });
 
