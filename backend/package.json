@@ -1,0 +1,31 @@
+{
+  "name": "openclaw-manager-backend",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc && node -e \"const fs=require('fs');const p=require('path');const src=p.join(__dirname,'src/db/schema.sql');const dst=p.join(__dirname,'dist/db/schema.sql');fs.mkdirSync(p.dirname(dst),{recursive:true});fs.copyFileSync(src,dst);\"",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20.10.0",
+    "@types/supertest": "^7.2.0",
+    "supertest": "^7.2.2",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.2",
+    "vitest": "^4.1.5"
+  }
+}
