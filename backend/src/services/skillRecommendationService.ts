@@ -1,7 +1,8 @@
 import { WslService } from './wslService.js';
 import { DataCache } from './dataCache.js';
+import { appConfig } from '../config.js';
 
-const OPENCLAW_PATH = '/home/afan/.openclaw';
+const OPENCLAW_PATH = appConfig.openclawPath;
 
 interface GitHubSkill {
   name: string;
